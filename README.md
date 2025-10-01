@@ -5,7 +5,19 @@ This repository contains
 - Exercises
 - Extra content such as HPC batch job templates
 
-# Authors
+## Environment quick start
+
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+
+2. Synchronize environment:
+
+```
+uv sync
+```
+
+3. If you wanna run using uv you can use `uv run file.py` or source the environment `source .venv/bin/activate`
+
+## Authors
 
 - Claudio Emiliano Torres Cantu (s253510)
 - Juno Van Ngo (s214606)
