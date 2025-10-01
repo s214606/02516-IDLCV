@@ -36,7 +36,7 @@ a100sh
 
 
 source .venv/bin/activate
-python path
+python project2.py
 ```
 
 And run
