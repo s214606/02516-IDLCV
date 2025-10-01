@@ -39,9 +39,11 @@ Alternatively, use [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 
 # 4 - Simple script
-```
+See `simple_script.py`
 
-```
+1. Make sure you are using interactive course GPU: `02516sh`
+2. Activate virtual environment if you haven't already: `source ~/02516-IDLCV/.venv/bin/activate`
+3. Run script: `python simple_script.py`
 
 # 5 Run script interactively using GPU
 To go into interactive node with course gpu, use `02516sh`.
