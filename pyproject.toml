@@ -5,8 +5,12 @@ description = "Introduction to Deep Learning for Computer Vision"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "matplotlib>=3.10.7",
     "numpy>=2.3.3",
     "pandas>=2.3.3",
+    "pydantic>=2.12.3",
+    "pydantic-settings>=2.11.0",
+    "rich>=14.2.0",
     "torch>=2.8.0",
     "torchvision>=0.23.0",
 ]
