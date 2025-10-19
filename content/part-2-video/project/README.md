@@ -16,6 +16,12 @@ There are 10 classes of actions:
  8. TrampolineJumping
  9. WallPushups
 
+**Running batch job**
+
+```
+bsub < jobscript.sh
+```
+
 ## 4.1 Explore models
 - Aggregate single frames
 - Early fusion
