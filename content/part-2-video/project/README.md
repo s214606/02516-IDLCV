@@ -26,3 +26,9 @@ There are 10 classes of actions:
 
 
 ## 4.3 Dual-stream networks
+
+
+
+# Misc
+- Taking inspiration from structure: https://www.geeksforgeeks.org/deep-learning/how-to-structure-a-pytorch-project/
+- Rich logging (handler): https://github.com/Textualize/rich/discussions/1173
