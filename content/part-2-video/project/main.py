@@ -4,11 +4,15 @@ from data.dataloaders import (
     framevideostack_testloader,
     frameimage_trainloader,
     frameimage_testloader,
+    frameflow_testloader,
+    frameflow_valloader,
+    frameflow_trainloader
 )
 from models.early_fusion import EarlyFusion
 from models.late_fusion import LateFusion
 from models.single_frame import SingleFrameCNN
 from models.C3D import C3D
+from models.two_stream.vgg8 import TemporalStreamVGG, SpatialStreamVGG
 import torch as t
 from config import settings
 
@@ -100,7 +104,49 @@ c3d_experiment = Experiment(
     },
     )
 
-single_frame_experiment.run()
+
+spatial_stream = SpatialStreamVGG(num_classes=10)
+spatial_optimizer = t.optim.SGD(spatial_stream.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
+
+spatial_experiment = Experiment(
+    project_name=project_name,
+    name='Two-Stream Spatial (RGB)',
+    config={
+        'train_loader': frameimage_trainloader,  # RGB frames only
+        'test_loader': frameimage_testloader,
+        'model': spatial_stream,
+        'loss_function': loss_function,
+        'optimizer': spatial_optimizer,
+        'epochs': epochs,
+        'dataset': dataset,
+    },
+)
+
+temporal_stream = TemporalStreamVGG(num_classes=10, num_frames=10)
+temporal_optimizer = t.optim.SGD(temporal_stream.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
+
+temporal_experiment = Experiment(
+    project_name=project_name,
+    name='Two-Stream Temporal (Flow)',
+    config={
+        'train_loader': frameflow_trainloader,  # Optical flow only
+        'test_loader': frameflow_valloader,
+        'model': temporal_stream,
+        'loss_function': loss_function,
+        'optimizer': temporal_optimizer,
+        'epochs': epochs,
+        'dataset': dataset,
+    },
+)
+
+spatial_experiment.run()
+t.save(spatial_stream.state_dict(), 'checkpoints/spatial_stream.pth')
+
+temporal_experiment.run()
+
+t.save(temporal_stream.state_dict(), 'checkpoints/temporal_stream.pth')
+
+#single_frame_experiment.run()
 #early_fusion_experiment.run()
 #late_fusion_experiment.run()
-c3d_experiment.run()
+#c3d_experiment.run()
