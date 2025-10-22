@@ -61,19 +61,19 @@ frameimage_testloader = DataLoader(
 frameimage_trainset = FrameFlowDataset(
     root_dir=settings.root_dir,
     split='train',
-    transform=transform
+    transform=None
     )
 
 frameimage_valset = FrameFlowDataset(
     root_dir=settings.root_dir,
     split='val',
-    transform=transform
+    transform=None
     )
 
 frameimage_testset = FrameFlowDataset(
     root_dir=settings.root_dir,
     split='test',
-    transform=transform
+    transform=None
     )
 
 
