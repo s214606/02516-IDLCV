@@ -139,12 +139,12 @@ temporal_experiment = Experiment(
     },
 )
 
-spatial_experiment.run()
-t.save(spatial_stream.state_dict(), 'checkpoints/spatial_stream.pth')
+#spatial_experiment.run()
+#t.save(spatial_stream.state_dict(), 'checkpoints/spatial_stream.pth')
 
-temporal_experiment.run()
+#temporal_experiment.run()
 
-t.save(temporal_stream.state_dict(), 'checkpoints/temporal_stream.pth')
+#t.save(temporal_stream.state_dict(), 'checkpoints/temporal_stream.pth')
 
 #single_frame_experiment.run()
 #early_fusion_experiment.run()
