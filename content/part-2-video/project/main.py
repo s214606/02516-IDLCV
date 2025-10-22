@@ -9,7 +9,7 @@ from data.dataloaders import (
     frameflow_trainloader
 )
 from models.early_fusion import EarlyFusion
-from models.late_fusion import LateFusion
+#from models.late_fusion import LateFusion
 from models.single_frame import SingleFrameCNN
 from models.C3D import C3D
 from models.two_stream.vgg8 import TemporalStreamVGG, SpatialStreamVGG
