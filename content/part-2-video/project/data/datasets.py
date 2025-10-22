@@ -116,3 +116,41 @@ if __name__ == '__main__':
     for video_frames, labels in framevideostack_loader:
         print(video_frames.shape, labels.shape) # [batch, channels, number of frames, height, width]
             
+
+class FrameFlowDataset(torch.utils.data.Dataset):
+    def __init__(self, 
+        root_dir='/work3/ppar/data/ucf101',
+        split='train', 
+        transform=None
+    ):
+        self.flow_paths = sorted(glob(f'{root_dir}/flows/{split}/*/*/*.npy'))
+        self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
+        self.split = split
+        self.transform = transform
+       
+    def __len__(self):
+        return len(self.flow_paths)
+
+    def _get_meta(self, attr, value):
+        return self.df.loc[self.df[attr] == value]
+
+    def __getitem__(self, idx):
+        flow_path = self.flow_paths[idx]
+        video_name = flow_path.split('/')[-2]
+        video_meta = self._get_meta('video_name', video_name)
+        label = video_meta['label'].item()
+        
+        # Load .npy file (optical flow is typically [H, W, 2] for x and y components)
+        flow = np.load(flow_path)
+        
+        # Convert to tensor
+        flow = torch.from_numpy(flow).float()
+        
+        # If flow is [H, W, 2], permute to [2, H, W] (channels first)
+        if flow.ndim == 3 and flow.shape[-1] == 2:
+            flow = flow.permute(2, 0, 1)
+        
+        if self.transform:
+            flow = self.transform(flow)
+
+        return flow, label
