@@ -43,7 +43,8 @@ class EarlyFusion(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(flat, 256), nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(256, num_classes)                               # logits
+            nn.Linear(256, num_classes),                          # logits
+            nn.Softmax(dim=1)
         )
 
     def forward(self, x):
