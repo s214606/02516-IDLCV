@@ -1,16 +1,20 @@
+import torch as t
+
+from config import settings
 from pipeline import Experiment
+
+from models.single_frame import SingleFrameCNN
+from models.early_fusion import EarlyFusion
+from models.late_fusion import LateFusion
+from models.C3D import C3D
+from models.two_stream import DualStreamNetwork
+
 from data.dataloaders import (
     framevideostack_trainloader,
     framevideostack_testloader,
     frameimage_trainloader,
     frameimage_testloader,
 )
-from models.early_fusion import EarlyFusion
-from models.late_fusion import LateFusion
-from models.single_frame import SingleFrameCNN
-from models.C3D import C3D
-import torch as t
-from config import settings
 
 loss_function = t.nn.CrossEntropyLoss()
 project_name = 'Video Classification'
@@ -100,7 +104,30 @@ c3d_experiment = Experiment(
     },
     )
 
-single_frame_experiment.run()
+dual_stream = DualStreamNetwork(
+    num_classes=10,
+    dropout=0.5,
+    temporal=False
+    )
+dual_stream_optimizer = t.optim.Adam(dual_stream.parameters(), lr=1e-4, weight_decay=1e-5)
+
+dual_stream_experiment = Experiment(
+    project_name=project_name,
+    name='Dual Stream',
+    config={
+        'train_loader': frameimage_trainloader,
+        'test_loader': frameimage_testloader,
+        'model': dual_stream,
+        'loss_function': loss_function,
+        'optimizer': dual_stream_optimizer,
+        'epochs': epochs,
+        'dataset': dataset,
+    },
+    )
+
+
+#single_frame_experiment.run()
 #early_fusion_experiment.run()
 #late_fusion_experiment.run()
-c3d_experiment.run()
+#c3d_experiment.run()
+#dual_stream_experiment.run()
