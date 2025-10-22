@@ -39,28 +39,28 @@ early_fusion_experiment = Experiment(
     )
 
 
-late_fusion = LateFusion(
-    num_frames=10,
-    num_classes=10,
-    dropout_rate=0.5,
-    fusion='average_pooling'
-)
+# late_fusion = LateFusion(
+#     num_frames=10,
+#     num_classes=10,
+#     dropout_rate=0.5,
+#     fusion='average_pooling'
+# )
 
-late_fusion_optimizer = t.optim.Adam(late_fusion.parameters(), lr=1e-3, weight_decay=1e-5)
+# late_fusion_optimizer = t.optim.Adam(late_fusion.parameters(), lr=1e-3, weight_decay=1e-5)
 
-late_fusion_experiment = Experiment(
-    project_name=project_name,
-    name='Late Fusion',
-    config={
-        'train_loader': framevideostack_trainloader,
-        'test_loader': framevideostack_testloader,
-        'model': late_fusion,
-        'loss_function': loss_function,
-        'optimizer': late_fusion_optimizer,
-        'epochs': epochs,
-        'dataset': dataset,
-    },
-    )
+# late_fusion_experiment = Experiment(
+#     project_name=project_name,
+#     name='Late Fusion',
+#     config={
+#         'train_loader': framevideostack_trainloader,
+#         'test_loader': framevideostack_testloader,
+#         'model': late_fusion,
+#         'loss_function': loss_function,
+#         'optimizer': late_fusion_optimizer,
+#         'epochs': epochs,
+#         'dataset': dataset,
+#     },
+#     )
 
 
 single_frame = SingleFrameCNN(
