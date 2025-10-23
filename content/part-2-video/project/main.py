@@ -14,7 +14,17 @@ from data.dataloaders import (
     framevideostack_testloader,
     frameimage_trainloader,
     frameimage_testloader,
+    frameflow_testloader,
+    frameflow_valloader,
+    frameflow_trainloader
 )
+from models.early_fusion import EarlyFusion
+#from models.late_fusion import LateFusion
+from models.single_frame import SingleFrameCNN
+from models.C3D import C3D
+from models.two_stream.vgg8 import TemporalStreamVGG, SpatialStreamVGG
+import torch as t
+from config import settings
 
 loss_function = t.nn.CrossEntropyLoss()
 project_name = 'Video Classification'
@@ -39,28 +49,28 @@ early_fusion_experiment = Experiment(
     )
 
 
-late_fusion = LateFusion(
-    num_frames=10,
-    num_classes=10,
-    dropout_rate=0.5,
-    fusion='average_pooling'
-)
+# late_fusion = LateFusion(
+#     num_frames=10,
+#     num_classes=10,
+#     dropout_rate=0.5,
+#     fusion='average_pooling'
+# )
 
-late_fusion_optimizer = t.optim.Adam(late_fusion.parameters(), lr=1e-3, weight_decay=1e-5)
+# late_fusion_optimizer = t.optim.Adam(late_fusion.parameters(), lr=1e-3, weight_decay=1e-5)
 
-late_fusion_experiment = Experiment(
-    project_name=project_name,
-    name='Late Fusion',
-    config={
-        'train_loader': framevideostack_trainloader,
-        'test_loader': framevideostack_testloader,
-        'model': late_fusion,
-        'loss_function': loss_function,
-        'optimizer': late_fusion_optimizer,
-        'epochs': epochs,
-        'dataset': dataset,
-    },
-    )
+# late_fusion_experiment = Experiment(
+#     project_name=project_name,
+#     name='Late Fusion',
+#     config={
+#         'train_loader': framevideostack_trainloader,
+#         'test_loader': framevideostack_testloader,
+#         'model': late_fusion,
+#         'loss_function': loss_function,
+#         'optimizer': late_fusion_optimizer,
+#         'epochs': epochs,
+#         'dataset': dataset,
+#     },
+#     )
 
 
 single_frame = SingleFrameCNN(
@@ -110,49 +120,49 @@ c3d_experiment = Experiment(
     },
     )
 
-dual_stream = DualStreamNetwork(
-    num_classes=10,
-    dropout=0.5,
-    temporal=False
-    )
-dual_stream_optimizer = t.optim.Adam(dual_stream.parameters(), lr=1e-4, weight_decay=1e-5)
 
-dual_stream_experiment = Experiment(
+spatial_stream = SpatialStreamVGG(num_classes=10)
+spatial_optimizer = t.optim.SGD(spatial_stream.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
+
+spatial_experiment = Experiment(
     project_name=project_name,
-    name='Dual Stream',
+    name='Two-Stream Spatial (RGB)',
     config={
-        'train_loader': frameimage_trainloader,
+        'train_loader': frameimage_trainloader,  # RGB frames only
         'test_loader': frameimage_testloader,
-        'model': dual_stream,
+        'model': spatial_stream,
         'loss_function': loss_function,
-        'optimizer': dual_stream_optimizer,
+        'optimizer': spatial_optimizer,
         'epochs': epochs,
         'dataset': dataset,
     },
-    )
+)
 
-from torchvision.models import resnet50, ResNet50_Weights
+temporal_stream = TemporalStreamVGG(num_classes=10, num_frames=10)
+temporal_optimizer = t.optim.SGD(temporal_stream.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
 
-resnet = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
-#resnet50_optimizer = t.optim.Adam(resnet50.parameters(), lr=1e-4, weight_decay=1e-5)
-resnet_optimizer = t.optim.SGD(resnet.parameters(), lr = 1e-5, momentum=0.9)
-resnet_experiment = Experiment(
+temporal_experiment = Experiment(
     project_name=project_name,
-    name='ResNet',
+    name='Two-Stream Temporal (Flow)',
     config={
-        'train_loader': frameimage_trainloader,
-        'test_loader': frameimage_testloader,
-        'model': resnet,
+        'train_loader': frameflow_trainloader,  # Optical flow only
+        'test_loader': frameflow_valloader,
+        'model': temporal_stream,
         'loss_function': loss_function,
-        'optimizer': resnet_optimizer,
+        'optimizer': temporal_optimizer,
         'epochs': epochs,
         'dataset': dataset,
     },
-    )
+)
 
-#resnet_experiment.run()
+#spatial_experiment.run()
+#t.save(spatial_stream.state_dict(), 'checkpoints/spatial_stream.pth')
+
+#temporal_experiment.run()
+
+#t.save(temporal_stream.state_dict(), 'checkpoints/temporal_stream.pth')
+
 #single_frame_experiment.run()
 #early_fusion_experiment.run()
 #late_fusion_experiment.run()
-c3d_experiment.run()
-#dual_stream_experiment.run()
+#c3d_experiment.run()

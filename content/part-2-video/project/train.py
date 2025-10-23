@@ -32,9 +32,7 @@ train_tracker = MetricTracker()
 test_tracker = MetricTracker()
 
 
-
 logger = get_logger(__name__)
-
 
 
 train_loader = framevideostack_trainloader
@@ -47,9 +45,6 @@ optimizer = t.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
 save_path = 'results/early_fusion.pt'
 os.makedirs(os.path.dirname(save_path), exist_ok=True)
-
-val_losses = []
-val_accuracies = []
 
 @timer
 def train_eval(model, epochs=10):
@@ -81,36 +76,22 @@ def train_eval(model, epochs=10):
 
             train_results = train_metrics.compute()
             train_tracker.update(ep, **train_results)
-            #log_metrics(ep, **train_results)
 
             # ---- Test
             test_metrics.reset()
             model.eval()
-            #t_loss_sum, t_correct, t_total = 0, 0, 0
             with t.no_grad():
                 for X, y in test_loader:
                     X, y = X.to(settings.device), y.to(settings.device)
                     logits = model(X)
-                    preds = logits.argmax(1)
-                    t_loss = criterion(logits, y)
 
                     test_metrics.update(logits, y)
-                    #t_loss_sum += t_loss.item() * y.size(0)
-                    #t_correct += (preds == y).sum().item()
-                    #t_total   += y.size(0)
 
                     progress.update(task_val, advance=1)
 
             test_results = test_metrics.compute()
             test_tracker.update(ep, **test_results)
             log_metrics(ep, **train_results, **test_results)
-            #avg_val_loss = t_loss_sum / t_total
-            #val_losses.append(avg_val_loss)
-            t#est_acc = 100.0 * t_correct / t_total
-            #val_accuracies.append(test_acc)
-
-            #logger.info(f"Epoch {ep:02d} | loss {loss_sum/len(train_loader):.4f} "
-            #      f"| train {train_acc:.2f}% | test {test_acc:.2f}%")
             
             # ---- Save best
             #if test_acc > best:
@@ -132,3 +113,4 @@ train_tracker.save_csv('results/train_results.csv')
 test_tracker.save_csv('results/test_results.csv')
 
 #logger.info(f"Final training results: {results}")
+
