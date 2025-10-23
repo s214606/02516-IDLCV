@@ -17,18 +17,13 @@ class Experiment:
             project_name: str,
             name: str,
             config: dict
-            # Dict[
-                # t.nn.Module, 
-                # t.utils.data.DataLoader,
-                # Any
-                # ],
             ):
         self.project_name = project_name
         self.name = name
         self.config = config
         
         self.progress = Progress()
-        # Initialize metrics
+
         self.train_accuracy = Accuracy()
         self.val_accuracy = Accuracy()
 
@@ -50,7 +45,7 @@ class Experiment:
     def _parse_config(self):
         return {k:f'{v=}'.split('=')[0] for k, v in self.config.items()}
 
-    def train(self):
+    def train(self, epoch):
         self.config['model'].train()
         total_loss = 0.0
         num_batches = 0
@@ -71,12 +66,21 @@ class Experiment:
             
             self.progress.update(self.task_train, advance=1)
         
+        if self.config['scheduler']:
+            before_lr = self.config['optimizer'].param_groups[0]['lr']
+            self.config['scheduler'].step()
+            after_lr = self.config['optimizer'].param_groups[0]['lr']
+
+            if before_lr != after_lr:
+                logger.info("Epoch %d: SGD lr %.4f -> %.4f" % (epoch, before_lr, after_lr))
+
+
         return {
             'loss/train': total_loss / num_batches,
             'accuracy/train': self.train_accuracy.compute()
         }
 
-    def eval(self):
+    def eval(self, epoch):
         self.config['model'].eval()
         total_loss = 0.0
         num_batches = 0
@@ -117,8 +121,8 @@ class Experiment:
 
         try:
             for epoch in range(1, self.config['epochs'] + 1):
-                train_results = self.train()
-                test_results = self.eval()
+                train_results = self.train(epoch)
+                test_results = self.eval(epoch)
 
                 self.experiment.log(train_results | test_results)
 

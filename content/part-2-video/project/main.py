@@ -66,7 +66,7 @@ late_fusion_experiment = Experiment(
 single_frame = SingleFrameCNN(
     num_classes=10,
 )
-single_frame_optimizer = t.optim.Adam(single_frame.parameters(), lr=1e-4, weight_decay=1e-5)
+single_frame_optimizer = t.optim.Adam(single_frame.parameters(), lr=1e-4, weight_decay=1e-4)
 
 single_frame_experiment = Experiment(
     project_name=project_name,
@@ -83,12 +83,17 @@ single_frame_experiment = Experiment(
     )
 
 c3d = C3D(
-    in_size=64,
+    in_size=128,
     num_classes=10,
     num_frames=10
 )
 
 c3d_optimizer = t.optim.Adam(c3d.parameters(), lr=1e-4, weight_decay=1e-5)
+c3d_scheduler = t.optim.lr_scheduler.StepLR(
+    c3d_optimizer,
+    step_size=15,
+    gamma=0.1
+    )
 
 c3d_experiment = Experiment(
     project_name=project_name,
@@ -101,6 +106,7 @@ c3d_experiment = Experiment(
         'optimizer': c3d_optimizer,
         'epochs': epochs,
         'dataset': dataset,
+        'scheduler': c3d_scheduler,
     },
     )
 
@@ -125,9 +131,28 @@ dual_stream_experiment = Experiment(
     },
     )
 
+from torchvision.models import resnet50, ResNet50_Weights
 
+resnet = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
+#resnet50_optimizer = t.optim.Adam(resnet50.parameters(), lr=1e-4, weight_decay=1e-5)
+resnet_optimizer = t.optim.SGD(resnet.parameters(), lr = 1e-5, momentum=0.9)
+resnet_experiment = Experiment(
+    project_name=project_name,
+    name='ResNet',
+    config={
+        'train_loader': frameimage_trainloader,
+        'test_loader': frameimage_testloader,
+        'model': resnet,
+        'loss_function': loss_function,
+        'optimizer': resnet_optimizer,
+        'epochs': epochs,
+        'dataset': dataset,
+    },
+    )
+
+#resnet_experiment.run()
 #single_frame_experiment.run()
 #early_fusion_experiment.run()
 #late_fusion_experiment.run()
-#c3d_experiment.run()
+c3d_experiment.run()
 #dual_stream_experiment.run()
