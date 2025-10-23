@@ -2,14 +2,13 @@ import logging
 import torch as t
 import wandb
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
 
 
 logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     root_dir: str = '/dtu/datasets1/02516/ucf101_noleakage'#'data/ufc10'##
-    api_key: str = Field(..., alias='api_key')
+    api_key: str
     device: str = 'cuda' if t.cuda.is_available() else 'cpu'
 
     # seed: int = 42
