@@ -1,14 +1,4 @@
-import torch as t
-
-from config import settings
-from pipeline import Experiment
-
-from models.single_frame import SingleFrameCNN
-from models.early_fusion import EarlyFusion
-from models.late_fusion import LateFusion
-from models.C3D import C3D
-from models.two_stream import DualStreamNetwork
-
+from pipeline import Experiment, TwoStreamFusion
 from data.dataloaders import (
     framevideostack_trainloader,
     framevideostack_testloader,
@@ -25,6 +15,7 @@ from models.C3D import C3D
 from models.two_stream.vgg8 import TemporalStreamVGG, SpatialStreamVGG
 import torch as t
 from config import settings
+import torch.optim as optim
 
 loss_function = t.nn.CrossEntropyLoss()
 project_name = 'Video Classification'
@@ -122,7 +113,8 @@ c3d_experiment = Experiment(
 
 
 spatial_stream = SpatialStreamVGG(num_classes=10)
-spatial_optimizer = t.optim.SGD(spatial_stream.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
+spatial_optimizer = t.optim.SGD(spatial_stream.parameters(), lr=5e-3, momentum=0.9)
+spatial_scheduler = optim.lr_scheduler.StepLR(spatial_optimizer, step_size=10, gamma=0.1)
 
 spatial_experiment = Experiment(
     project_name=project_name,
@@ -138,8 +130,9 @@ spatial_experiment = Experiment(
     },
 )
 
-temporal_stream = TemporalStreamVGG(num_classes=10, num_frames=10)
-temporal_optimizer = t.optim.SGD(temporal_stream.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
+temporal_stream = TemporalStreamVGG(num_classes=10, num_frames=9)
+temporal_optimizer = t.optim.SGD(temporal_stream.parameters(), lr=5e-3, momentum=0.9,weight_decay= 1e-4)
+temporal_scheduler = optim.lr_scheduler.StepLR(temporal_optimizer, step_size=25, gamma=0.1)
 
 temporal_experiment = Experiment(
     project_name=project_name,
@@ -152,15 +145,44 @@ temporal_experiment = Experiment(
         'optimizer': temporal_optimizer,
         'epochs': epochs,
         'dataset': dataset,
+        'scheduler':temporal_scheduler,
     },
 )
 
+
+
+# Load the checkpoints 
+
+
+# temporal_stream_ = TemporalStreamVGG()
+# temporal_stream_.load_state_dict(t.load('checkpoints/temporal_stream.pth'))
+# temporal_model = temporal_stream_  # Use the model itself, not the return value
+
+# spatial_stream_ = SpatialStreamVGG()
+# spatial_stream_.load_state_dict(t.load('checkpoints/spatial_stream.pth'))
+# spatial_model = spatial_stream_  # Use the model itself, not the return value
+
+# two_stream_fusion_vgg_experiment = TwoStreamFusion(
+#     project_name=project_name,
+#     name='Two-Stream Fused model',
+#     config={
+#         'spatial_model': spatial_model,
+#         'temporal_model': temporal_model,
+#         'frame_test_loader': framevideostack_testloader,
+#         'flow_test_loader': frameflow_valloader,
+#         'loss_function': loss_function
+#     }
+# )
+    
+
+
+
 #spatial_experiment.run()
-#t.save(spatial_stream.state_dict(), 'checkpoints/spatial_stream.pth')
+#t.save(spatial_stream.state_dict(), 'checkpoints/spatial_stream_ultimate_test.pth')
 
-#temporal_experiment.run()
-
-#t.save(temporal_stream.state_dict(), 'checkpoints/temporal_stream.pth')
+#two_stream_fusion_vgg_experiment.run()
+temporal_experiment.run()
+t.save(temporal_stream.state_dict(), 'checkpoints/temporal_stream_final2.pth')
 
 #single_frame_experiment.run()
 #early_fusion_experiment.run()
