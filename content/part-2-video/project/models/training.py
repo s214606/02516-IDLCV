@@ -7,7 +7,7 @@ from torchvision import transforms as T
 from tqdm.auto import tqdm
 
 from datasets import FrameVideoDataset
-from models import LateFusion  # your class
+from late_fusion import LateFusion  # your class
 save_dir = "/zhome/99/f/223556/project_2/src"
 # -------------------------
 # Repro & device selection
