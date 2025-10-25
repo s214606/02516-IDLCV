@@ -6,6 +6,7 @@ from PIL import Image
 import torch
 from torchvision import transforms as T
 
+
 class FrameImageDataset(torch.utils.data.Dataset):
     def __init__(self, 
     root_dir='/work3/ppar/data/ucf101',
@@ -116,21 +117,44 @@ if __name__ == '__main__':
 
     for video_frames, labels in framevideostack_loader:
         print(video_frames.shape, labels.shape) # [batch, channels, number of frames, height, width]
-            
+
 class FrameFlowDataset(torch.utils.data.Dataset):
     def __init__(self, 
-        root_dir='/work3/ppar/data/ucf101', 
+        root_dir='/dtu/datasets1/02516/ucf101_noleakage', 
         split='train', 
         transform=None,
         stack_frames=True
     ):
-        self.flow_dirs = sorted(glob(f'{root_dir}/flows/{split}/*/*'))
-        self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
+        self.n_sampled_frames = 9
         self.split = split
         self.transform = transform
         self.stack_frames = stack_frames
         
-        self.n_sampled_frames = 10
+        flow_dirs = sorted(glob(f'{root_dir}/flows/{split}/*/*'))
+        self.flow_dirs = self._filter_valid_flows(flow_dirs)
+        self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
+
+    def _filter_valid_flows(self, flow_dirs):
+       
+        valid_dirs = []
+        
+       
+        
+        for flow_dir in flow_dirs:
+            if os.path.exists(flow_dir):
+                # Check for flow files with pattern flow_i_j.npy
+                all_exist = all(
+                    os.path.exists(os.path.join(flow_dir, f"flow_{i}_{i+1}.npy"))
+                    for i in range(1, self.n_sampled_frames + 1)
+                )
+                if all_exist:
+                    valid_dirs.append(flow_dir)
+        
+        if len(valid_dirs) == 0:
+            raise ValueError(f"No valid flow directories found with all {self.n_sampled_frames} flow files")
+        
+        
+        return valid_dirs
 
     def __len__(self):
         return len(self.flow_dirs)
@@ -138,32 +162,52 @@ class FrameFlowDataset(torch.utils.data.Dataset):
     def _get_meta(self, attr, value):
         return self.df.loc[self.df[attr] == value]
 
+    def load_flows(self, flow_dir):
+        """Load flows with naming convention flow_i_j.npy (e.g., flow_1_2.npy, flow_2_3.npy)"""
+        flows = []
+        
+        for i in range(1, self.n_sampled_frames + 1):
+            flow_file = os.path.join(flow_dir, f"flow_{i}_{i+1}.npy")
+            flow = np.load(flow_file)
+            
+            
+            
+            flows.append(flow)
+        
+    
+        flow_volume = np.concatenate(flows, axis=2)
+
+        
+        return flows
+
     def __getitem__(self, idx):
         flow_dir = self.flow_dirs[idx]
         video_name = flow_dir.split('/')[-1]
         video_meta = self._get_meta('video_name', video_name)
         label = video_meta['label'].item()
 
+        # Load all flows: list of (2, H, W) arrays
         flows = self.load_flows(flow_dir)
-
-        if self.transform:
-            flows = [self.transform(flow) for flow in flows]
-        else:
-            flows = [torch.from_numpy(flow).float() for flow in flows]
         
-        # Ensure flows are in [C, H, W] format before stacking
-        flows = [flow.permute(2, 0, 1) if flow.ndim == 3 and flow.shape[-1] == 2 
-                 else flow for flow in flows]
+        # Stack flows along CHANNEL dimension (axis=0): (2, 224, 224) * 9 -> (18, 224, 224)
+        flow_volume = np.concatenate(flows, axis=0)  # Changed from axis=2 to axis=0
+        
+        
+        # Apply transform to the entire volume
+        if self.transform:
+            flow_volume = self.transform(flow_volume)  # (18, 224, 224) -> (18, 224, 224)
+        else:
+            flow_volume = torch.from_numpy(flow_volume).float()  # Already (C, H, W) format
+        
+        # flow_volume is now [2L, H, W] = [18, 224, 224]
         
         if self.stack_frames:
-            flows = torch.stack(flows).permute(1, 0, 2, 3)  # [C, T, H, W]
-
-        return flows, label
-    
-    def load_flows(self, flow_dir):
-        flows = []
-        for i in range(1, self.n_sampled_frames + 1):
-            flow_file = os.path.join(flow_dir, f"flow_{i}.npy")
-            flow = np.load(flow_file)
-            flows.append(flow)
-        return flows
+            # Reshape to [C, T, H, W] = [2, 9, 224, 224]
+            C = 2
+            T = self.n_sampled_frames
+            flow_volume = flow_volume.reshape(C, T, flow_volume.shape[1], flow_volume.shape[2])
+            
+            # Flatten to [C*T, H, W] = [18, 224, 224]
+            flow_volume = flow_volume.reshape(C * T, flow_volume.shape[2], flow_volume.shape[3])
+        
+        return flow_volume, label
