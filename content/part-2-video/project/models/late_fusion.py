@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import models
 
 class IndividualModel(nn.Module):
     """
@@ -12,26 +13,39 @@ class IndividualModel(nn.Module):
         out_dim: integer referring to the last layer for fixed feature size
         fully_connected: boolean value for 
     """
+    class IndividualModel(nn.Module):
+        """
+        Per-frame CNN that outputs a feature vector [B, C, H, W] for a single frame.
+        Designed for 64x64 inputs; uses global avg pool to be robust to size.
+        """
+
+        """
+        Args:
+        out_dim: integer referring to the last layer for fixed feature size
+        fully_connected: boolean value for 
+        """
     def __init__(self, out_dim: int = 128): 
         super(IndividualModel, self).__init__()
         self.out_dim = out_dim
-        self.flow = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(),
-            nn.MaxPool2d(2),  # 32x32
-            nn.Conv2d(32, 64, 3, padding=1), nn.BatchNorm2d(64), nn.ReLU(),
-            nn.MaxPool2d(2),  # 16x16
-            nn.Conv2d(64, 128, 3, padding=1), nn.BatchNorm2d(128), nn.ReLU(),
-            nn.MaxPool2d(2),  # 8x8
-            nn.Conv2d(128, 256, 3, padding=1), nn.BatchNorm2d(256), nn.ReLU(),
-            nn.MaxPool2d(2),  # 4x4
-            nn.Conv2d(256, 512, 3, padding=1), nn.BatchNorm2d(512), nn.ReLU(),
-            nn.MaxPool2d(2),  # 2x2
-            #nn.Conv2d(512, 512, 1), nn.BatchNorm2d(512), nn.ReLU(),
-            nn.Conv2d(512, 1024, 3, padding=1), nn.BatchNorm2d(1024), nn.ReLU(),
-            nn.Conv2d(1024, out_dim, 1), nn.BatchNorm2d(out_dim), nn.ReLU(),#shape: [128 x 2 x 2]
-        )
+        # Load pretrained VGG16
+        vgg16 = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
+        self.features = vgg16.features
+    
+
+    # Freeze early layers, only train deeper ones
+        for i, layer in enumerate(self.features):
+            if i < 16:  # Freeze first ~20 layers
+                for param in layer.parameters():
+                    param.requires_grad = False
+        
+        self.final_conv = nn.Sequential(nn.Conv2d(512, out_dim, 1),
+        nn.BatchNorm2d(out_dim), nn.ReLU())
+        
     def forward(self, x):
-        x = self.flow(x)
+        
+        # x = self.flow(x)
+        x = self.features(x)
+        x = self.final_conv(x)
         # print(f"the shape of our output shit is {x.shape}")
         return x
         
