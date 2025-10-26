@@ -1,62 +1,49 @@
 import torch as t
 import torch.nn as nn
+from torchvision import models
 
 class EarlyFusion(nn.Module):
     def __init__(self, in_size=64, num_classes=10, num_frames=10):
         super().__init__()
 
         in_channels = 3 * num_frames  # 3 channels (RGB) per frame
+        vgg16 = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
+        #self.features = vgg16.features
 
-        self.features = nn.Sequential(
-            nn.Conv2d(in_channels, 16, 3, padding=1),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-
-            nn.Conv2d(16, 16, 3, padding=1),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-
-            nn.MaxPool2d(2),  # 128 → 64
-
-            nn.Conv2d(16, 32, 3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-
-            nn.Conv2d(32, 32, 3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-
-            nn.MaxPool2d(2),  # 64 → 32
-
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-
-            nn.Conv2d(64, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-
-            nn.MaxPool2d(2),  # 32 → 16
-        )
+        self.features = nn.Sequential(*list(vgg16.features.children()))
+        # Replace first conv layer
+        self.features[0] = nn.Conv2d(num_frames * 3, 64, kernel_size=3, padding=1)
         
-        flat = 64 * (in_size//8) * (in_size//8)            # 64*16*16
+        # Initialize with averaged pretrained weights
+        with t.no_grad():
+            pretrained_weight = vgg16.features[0].weight
+            new_weight = pretrained_weight.repeat(1, num_frames, 1, 1) / num_frames
+            self.features[0].weight.copy_(new_weight)
+        
+        for i, layer in enumerate(self.features):
+            if i <= 9:  # Blocks 1-2 trainable
+                for param in layer.parameters():
+                    param.requires_grad = True
+            else:  # Blocks 3-5 frozen
+                for param in layer.parameters():
+                    param.requires_grad = False
+        
         self.classifier = nn.Sequential(
-            nn.Linear(flat, 256), nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(256, num_classes),                          # logits
-            nn.Softmax(dim=1)
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(256, num_classes)
         )
 
     def forward(self, x):
-
         x = self._early_fusion(x)  # B, C*T, H, W
-        B, CT, H, W = x.shape
         x = self.features(x)
-        x = x.view(B, -1)
-        x = self.classifier(x)
-        return x
+        logits = self.classifier(x)
+        return logits
 
     def _early_fusion(self, x):
-        B, C, T, H, W = x.shape
-        x = x.reshape(B, C*T, H, W) # B, C*T, H, W
+        B, C, T, H, W = x.shape  # (B, 3, 10, 64, 64) ← Changed from T, C, H, W
+        x = x.reshape(B, C*T, H, W)  # (B, 30, 64, 64)
         return x
