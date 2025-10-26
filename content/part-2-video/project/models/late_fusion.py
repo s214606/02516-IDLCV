@@ -1,152 +1,94 @@
-# train_late_fusion_clean.py
-import os, random
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from torchvision import transforms as T
-from tqdm.auto import tqdm
+import torch.nn.functional as F
 
-from datasets import FrameVideoDataset
-from models import LateFusion  # your class
-save_dir = "/zhome/99/f/223556/project_2/src"
-# -------------------------
-# Repro & device selection
-# -------------------------
-# def set_seed(s=1337):
-#     random.seed(s)
-#     torch.manual_seed(s)
-#     torch.cuda.manual_seed_all(s)
-
-# set_seed(1337)
-torch.backends.cudnn.benchmark = True
-
-device = (
-    torch.device("mps")  if torch.backends.mps.is_available() else
-    torch.device("cuda") if torch.cuda.is_available() else
-    torch.device("cpu")
-)
-use_cuda = device.type == "cuda"
-
-print(f"Using device: {device}")
-
-# -------------
-# Data
-# -------------
-#root_dir = "/dtu/datasets1/02516/ucf101_noleakage"
-root_dir = "/zhome/99/f/223556/project_2/ufc10"
-transform = T.Compose([T.Resize((64, 64)), T.ToTensor()])
-
-train_ds = FrameVideoDataset(root_dir=root_dir, split="train", transform=transform, stack_frames=True)
-val_ds   = FrameVideoDataset(root_dir=root_dir, split="val",   transform=transform, stack_frames=True)
-
-pin_memory = use_cuda  # only benefits CUDA
-
-train_loader = DataLoader(
-    train_ds, batch_size=8, shuffle=True,
-    pin_memory=pin_memory )
-
-val_loader = DataLoader(
-    val_ds, batch_size=8, shuffle=False, pin_memory=pin_memory)
-
-# -----------------
-# Model & training
-# -----------------
-num_classes = 10   # set your value (or infer from dataset if you expose it)
-num_frames  = 10
-
-model = LateFusion(num_frames=num_frames, num_classes=num_classes, dropout_rate=0.5, fusion="average_pooling").to(device)
-
-
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-3)
-criterion = nn.CrossEntropyLoss()
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)  # optional
-
-def accuracy(logits, y):
-    return (logits.argmax(1) == y).float().mean().item()
-
-@torch.no_grad()
-def evaluate(model, loader):
-    model.eval()
-    total_loss, total_correct, total = 0.0, 0, 0
-    for x, y in tqdm(loader, desc="Val", leave=False):
-        x = x.to(device, non_blocking=use_cuda and pin_memory)
-        y = y.long().to(device, non_blocking=use_cuda and pin_memory)
-
-        logits = model(x)                    # [B, num_classes]
-        loss = criterion(logits, y)
-
-        total_loss   += loss.item() * y.size(0)
-        total_correct+= (logits.argmax(1) == y).sum().item()
-        total        += y.size(0)
-    return total_loss / max(1,total), total_correct / max(1,total)
-
-def train_one_epoch(model, loader, max_grad_norm=1.0):
-    model.train()
-    total_loss, total_correct, total = 0.0, 0, 0
-    pbar = tqdm(loader, desc="Train", leave=False)
-    for x, y in pbar:
-        x = x.to(device, non_blocking=use_cuda and pin_memory)
-        y = y.long().to(device, non_blocking=use_cuda and pin_memory)
-
-        optimizer.zero_grad(set_to_none=True)
-        logits = model(x)
-        loss = criterion(logits, y)
-        loss.backward()
-
-        if max_grad_norm is not None:
-            nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
-
-        optimizer.step()
-
-        total_loss   += loss.item() * y.size(0)
-        total_correct+= (logits.argmax(1) == y).sum().item()
-        total        += y.size(0)
-
-        pbar.set_postfix(
-            train_loss=total_loss / max(1,total),
-            train_acc =total_correct / max(1,total)
+class IndividualModel(nn.Module):
+    """
+    Per-frame CNN that outputs a feature vector [B, C, H, W] for a single frame.
+    Designed for 64x64 inputs; uses global avg pool to be robust to size.
+    """
+    """
+    Args:
+        out_dim: integer referring to the last layer for fixed feature size
+        fully_connected: boolean value for 
+    """
+    def __init__(self, out_dim: int = 128): 
+        super(IndividualModel, self).__init__()
+        self.out_dim = out_dim
+        self.flow = nn.Sequential(
+            nn.Conv2d(3, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(),
+            nn.MaxPool2d(2),  # 32x32
+            nn.Conv2d(32, 64, 3, padding=1), nn.BatchNorm2d(64), nn.ReLU(),
+            nn.MaxPool2d(2),  # 16x16
+            nn.Conv2d(64, 128, 3, padding=1), nn.BatchNorm2d(128), nn.ReLU(),
+            nn.MaxPool2d(2),  # 8x8
+            nn.Conv2d(128, 256, 3, padding=1), nn.BatchNorm2d(256), nn.ReLU(),
+            nn.MaxPool2d(2),  # 4x4
+            nn.Conv2d(256, 512, 3, padding=1), nn.BatchNorm2d(512), nn.ReLU(),
+            nn.MaxPool2d(2),  # 2x2
+            #nn.Conv2d(512, 512, 1), nn.BatchNorm2d(512), nn.ReLU(),
+            nn.Conv2d(512, 1024, 3, padding=1), nn.BatchNorm2d(1024), nn.ReLU(),
+            nn.Conv2d(1024, out_dim, 1), nn.BatchNorm2d(out_dim), nn.ReLU(),#shape: [128 x 2 x 2]
         )
-    return total_loss / max(1,total), total_correct / max(1,total)
+    def forward(self, x):
+        x = self.flow(x)
+        # print(f"the shape of our output shit is {x.shape}")
+        return x
+        
+class LateFusion(nn.Module):
+    """Temporal late fusion with a shared per-frame CNN.
 
-# -----------
-# Run train
-# -----------
-epochs = 50
-best_val_acc, best_epoch = 0.0, 0
-train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist = [], [], [], []
-ckpt_path = os.path.join(save_dir, "late_fusion_best_leakage.pt")
+    Expects input shaped either [B, C, T, H, W] or [B, T, C, H, W].
+    Returns logits of shape [B, num_classes]. Fusion modes:
+      - 'average_pooling': per-frame global avg pool → 256-d features → average over time
+      - 'fully_connected': return per-frame feature maps, flatten spatially, concatenate across time
+      - num frames corresponds to the number of frames per video
+      - num classes
+    """
+    def __init__(self, num_frames: int, num_classes: int, dropout_rate: float = 0.3, fusion: str = 'fully_connected'):
+        super(LateFusion, self).__init__()
+        assert fusion in {'average_pooling', 'fully_connected'}, "fusion must be 'average_pooling' or 'fully_connected'"
+        self.num_frames = num_frames
+        self.fusion = fusion
+        self.dropout_rate = dropout_rate
+        self.num_classes = num_classes
+        self.encoder = IndividualModel(out_dim=128)
+        self.classifier = nn.LazyLinear(self.num_classes)
+        self.pool = nn.AdaptiveAvgPool2d(1) #revise why this works or why also (1,1) works
 
-for epoch in range(1, epochs+1):
-    tr_loss, tr_acc = train_one_epoch(model, train_loader)
-    va_loss, va_acc = evaluate(model, val_loader)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Accept stacked tensor either as [B, T, 3, H, W] or [B, 3, T, H, W]
+        if not (torch.is_tensor(x) and x.dim() == 5):
+            raise TypeError("LateFusion.forward expects a stacked tensor [B, T, 3, H, W] or [B, 3, T, H, W]")
 
-    # scheduler.step()  # optional
+        # If input is [B, 3, T, H, W], permute to [B, T, 3, H, W]
+        if x.shape[1] == 3 and x.shape[2] == self.num_frames:
+            x = x.permute(0, 2, 1, 3, 4).contiguous()
 
-    train_loss_hist.append(tr_loss); train_acc_hist.append(tr_acc)
-    val_loss_hist.append(va_loss);   val_acc_hist.append(va_acc)
+        B, T, C, H, W = x.shape
 
-    if va_acc > best_val_acc:
-        best_val_acc, best_epoch = va_acc, epoch
-        torch.save({
-            "model_state_dict": model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "epoch": epoch,
-            "num_classes": num_classes,
-        }, ckpt_path)
+        # Fold time into batch → encode per-frame → unfold back        
+        batch_stacked_frames = x.view(B * T, C, H, W)
 
-    print(f"Epoch {epoch:02d}/{epochs} | "
-          f"train {tr_loss:.4f}/{tr_acc:.3f} | "
-          f"val {va_loss:.4f}/{va_acc:.3f} | "
-          f"best {best_val_acc:.3f} @ {best_epoch:02d}")
-
-print(f"Saved best checkpoint to: {ckpt_path}")
-
-
-# # Save last checkpoint (replace with best model saving logic if desired)
-# torch.save({
-#     'model_state_dict': model.state_dict(),
-#     'optimizer_state_dict': optimizer.state_dict(),
-#     'epoch': epochs,
-#     'num_classes': num_classes,
-# }, 
-# '/Users/emilianotorres/DTU_Masters/semester_1/DL_in_CV/project_2/last_checkpoint.pt')
+        if self.fusion == 'average_pooling':
+            feats = self.encoder(batch_stacked_frames)
+            #print(f"The size of feats is {feats.shape}") # (ideally) returns a tensor of size [80, 128, 2, 2]
+            pooling = self.pool(feats) # Converts into tensor of size [80, 128, 1, 1] by performing GLOBAL AVERAGE POOLING
+            #print(f"The size of POOLING FEATS is {pooling.shape}") # (ideally) returns a tensor of size [80, 128, 1, 1]
+            pooled_feats = pooling.reshape(B, T, -1)   # (Ideally) Returns a vector of size [8, 10, 128]
+            #print(f"POOLED feats look like {pooled_feats.shape}")
+            clip_feat = pooled_feats.mean(dim=1) # IDEALLY RETURNS [8, 128]
+            #print(f"The shape before passing to linear pooling layer is {clip_feat.shape}")
+            logits = self.classifier(clip_feat)            # [128, num_classes]
+            return logits
+        else:  # 'fully_connected'
+            maps = self.encoder(batch_stacked_frames)              # Encoder returns maps [80, 128, 2, 2] 80 -> B*T
+            BT, C2, h, w = maps.shape
+            #print(f"The first shape of fully connected is {maps.shape}")
+            maps = maps.reshape(B, T, C2, h, w)               # [B, T, 128, h, w]
+            flat = maps.flatten(start_dim=2)               # [B, T, 128*h*w]
+            #print(f"The FLAT shape of fully connected is {flat.shape}")
+            fused = flat.flatten(start_dim=1)              # [B, T*128*h*w] (could also do everything at once)
+            #print(f"The SECOND FLAT shape of fully connected is {fused.shape}")
+            logits = self.classifier(fused)                # [B, num_classes]
+            return logits
