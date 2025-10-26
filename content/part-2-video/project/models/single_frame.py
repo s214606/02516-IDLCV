@@ -1,74 +1,32 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import models
 
 class SingleFrameCNN(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes=10, freeze_features=True):
         super().__init__()
-        self.num_classes = num_classes
-        self.convolutional = nn.Sequential(
+        
+        # Load pretrained VGG16
+        vgg16 = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
+        self.features = vgg16.features
+        
 
-                nn.Conv2d(3,16,3,padding=1), 
-                nn.BatchNorm2d(16),
-                nn.ReLU(),
-
-                nn.Conv2d(16,32,3,padding=1), #64->64
-                nn.BatchNorm2d(32),
-                nn.ReLU(),
-
-                nn.MaxPool2d(2,2), #64 - > 32 
-
-                nn.Conv2d(32,32,3,padding=1), #32 ->32
-                nn.BatchNorm2d(32),
-                nn.ReLU(),
-                
-                
-                nn.Conv2d(32,64,3,padding=1), #32 ->32
-                nn.BatchNorm2d(64),
-                nn.ReLU(),
-                
-                nn.MaxPool2d(2,2), #32 ->16
-
-                nn.Conv2d(64,128,3,padding=1), #16 ->16
-                nn.BatchNorm2d(128),
-                nn.ReLU(),
-                
-                
-                nn.Conv2d(128,128,3,padding=1), #16 ->16
-                nn.BatchNorm2d(128),
-                nn.ReLU(),
-                
-                nn.MaxPool2d(2,2), #16 -> 8
-
-
-                nn.Conv2d(128,128,3,padding=1), #8 ->8
-                nn.BatchNorm2d(128),
-                nn.ReLU(),
-                
-                
-                nn.Conv2d(128,128,3,padding=1), #8 ->8
-                nn.BatchNorm2d(128),
-                nn.ReLU(),
-            
-
-                nn.MaxPool2d(2,2), #8 -> 4
-                nn.Flatten(),
-                
-                nn.Linear(4*4*128, 128),
-                nn.BatchNorm1d(128),
-                nn.ReLU(),
-            
-                nn.Dropout(0.3),
-
-                nn.Linear(128, 64),
-                nn.BatchNorm1d(64),
-                nn.ReLU(),
-            
-                nn.Linear(64,num_classes)
-                )
-
-    def forward(self, x):
-            
-            return self.convolutional(x)
-
+        # Freeze early layers, only train deeper ones
+        for i, layer in enumerate(self.features):
+            if i < 16:  # Freeze first ~20 layers
+                for param in layer.parameters():
+                    param.requires_grad = False
+        
+        self.classifier = nn.Sequential(
+        nn.AdaptiveAvgPool2d((1, 1)),
+        nn.Flatten(),
+        nn.Dropout(0.9),
+        nn.Linear(512, num_classes)
+    )
+    
+    def forward(self, rgb):
+        x = self.features(rgb)
+        logits = self.classifier(x)
+        return logits
   
