@@ -12,17 +12,25 @@ class SpatialStreamVGG(nn.Module):
         
 
         # Freeze early layers, only train deeper ones
-        for i, layer in enumerate(self.features):
-            if i < 16:  # Freeze first ~20 layers
-                for param in layer.parameters():
-                    param.requires_grad = False
+        for name, param in self.features.named_parameters():
+            # Freeze first 2 conv blocks, train rest
+            if 'features.0.' in name or 'features.7.' in name:  
+                param.requires_grad = False
+
+
         
         self.classifier = nn.Sequential(
-        nn.AdaptiveAvgPool2d((1, 1)),
-        nn.Flatten(),
-        nn.Dropout(0.9),
-        nn.Linear(512, num_classes)
-    )
+            nn.AdaptiveAvgPool2d((7, 7)),
+            nn.Flatten(),
+            nn.Linear(512*7*7,4096),
+            nn.ReLU(),
+            nn.Dropout(0.9),
+            nn.Linear(4096, 2048),
+            nn.ReLU(),
+            nn.Dropout(0.9),
+            nn.Linear(2048, num_classes),
+           
+        )
     
     def forward(self, rgb):
         x = self.features(rgb)

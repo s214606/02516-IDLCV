@@ -5,6 +5,12 @@ from config import settings
 from typing import Dict, Any
 from rich.progress import Progress
 from metrics.classification import Accuracy
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
+import numpy as np
+import os
+
 
 logger = get_logger(__name__) 
 
@@ -215,7 +221,7 @@ class TwoStreamFusion:
         # Apply softmax and average
         spatial_probs = t.softmax(spatial_logits, dim=1)
         temporal_probs = t.softmax(temporal_logits, dim=1)
-        fused_probs = (spatial_probs*0.3 + temporal_probs*0.7)
+        fused_probs = (spatial_probs*0.5 + temporal_probs*0.5)
         
         return fused_probs
     
@@ -227,6 +233,10 @@ class TwoStreamFusion:
         total_loss = 0.0
         num_batches = 0
         self.val_accuracy.reset()
+        
+        # Collect predictions and labels for confusion matrix
+        all_preds = []
+        all_labels = []
         
         with t.no_grad():
             for (frame_X, frame_y), (flow_X, flow_y) in zip(
@@ -243,6 +253,13 @@ class TwoStreamFusion:
                 fused_probs = self._fuse_predictions(frame_X, flow_X)
                 fused_logits = t.log(fused_probs + 1e-10)
                 
+                # Get predicted classes
+                preds = t.argmax(fused_probs, dim=1)
+                
+                # Store for confusion matrix
+                all_preds.append(preds.cpu())
+                all_labels.append(y.cpu())
+                
                 self.val_accuracy.update(fused_logits, y)
                 
                 if 'loss_function' in self.config:
@@ -252,11 +269,57 @@ class TwoStreamFusion:
                 num_batches += 1
                 self.progress.update(self.task, advance=1)
         
+        # Concatenate all predictions and labels
+        all_preds = t.cat(all_preds)
+        all_labels = t.cat(all_labels)
+        
         results = {'accuracy/fusion': self.val_accuracy.compute()}
         if 'loss_function' in self.config:
             results['loss/fusion'] = total_loss / num_batches
+        
+        # Class names
+        classes_list = ['Body-WeightSquats', 'HandstandPushups', 'HandstandWalking', 
+                        'JumpingJack', 'JumpRope', 'Lunges', 'PullUps', 'PushUps', 
+                        'TrampolineJumping', 'WallPushups']
+        
+        # Create confusion matrix using sklearn
+        cm = confusion_matrix(all_labels.numpy(), all_preds.numpy())
+        
+        # Create and save matplotlib figure
+        plt.figure(figsize=(12, 10))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='plasma', 
+                    xticklabels=classes_list, yticklabels=classes_list,
+                    cbar_kws={'label': 'Count'})
+        plt.title('Two-Stream Fusion - Confusion Matrix', fontsize=16, pad=20)
+        plt.xlabel('Predicted Label', fontsize=12)
+        plt.ylabel('True Label', fontsize=12)
+        plt.xticks(rotation=45, ha='right')
+        plt.yticks(rotation=0)
+        plt.tight_layout()
+        
+        # Create results directory if it doesn't exist
+        os.makedirs('./results', exist_ok=True)
+        
+        # Save the figure
+        save_path = f'./results/confusion_matrix_{self.name}.png'
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        logger.info(f"Confusion matrix saved to {save_path}")
+        
+        # Also log to wandb
+        results['confusion_matrix'] = wandb.plot.confusion_matrix(
+            probs=None,
+            y_true=all_labels.numpy(),
+            preds=all_preds.numpy(),
+            class_names=classes_list
+        )
+        
+        # Optionally log the saved image to wandb as well
+        results['confusion_matrix_image'] = wandb.Image(save_path)
             
         return results
+
     
     def predict(self, frame_input: t.Tensor, flow_input: t.Tensor) -> t.Tensor:
         """Make predictions using the fused two-stream model."""
