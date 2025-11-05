@@ -1,8 +1,8 @@
 import os
 from torch.utils.data import DataLoader
-
-from .datasets import DriveData,PH2
-from .transforms import transform
+import torch
+from data.datasets import DriveData,PH2, PH2Clicks
+from data.transforms import transform
 #from config import settings
 
 
@@ -61,6 +61,21 @@ PH2_testloader = DataLoader(
     shuffle= True,
     num_workers=4
 )
+
+
+
+
+# Wrap with clicks
+PH2_clicks = PH2Clicks(
+    base_dataset=PH2_train,
+    positive_clicks=3,
+    negative_clicks=3,
+    centered=False,
+    boundary_width=5,
+    seed=None
+)
+
+
 
 if __name__ == '__main__':
     # Print dataset information
@@ -148,16 +163,35 @@ if __name__ == '__main__':
     print(f"\nFirst few mask paths:")
 
 
-    image, mask = PH2_train[0]
-
-    # Print sample information
-    print("\n" + "=" * 60)
-    print("FIRST SAMPLE INFORMATION")
-    print("=" * 60)
-    print(f"Image shape: {image.shape}")
-    print(f"Image dtype: {image.dtype}")
-    print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
-    print(f"\nMask shape: {mask.shape}")
 
 
+    input_5ch, mask = PH2_clicks[3]
 
+    import matplotlib.pyplot as plt
+
+    # Extract channels
+    image = input_5ch[:3]  # RGB channels
+    pos_channel = input_5ch[3]  # Positive clicks channel
+    neg_channel = input_5ch[4]  # Negative clicks channel
+
+    plt.figure(figsize=(15, 5))
+
+    plt.subplot(131)
+    plt.imshow(image.permute(1, 2, 0))
+    plt.title('Image')
+
+    plt.subplot(132)
+    plt.imshow(mask, cmap='gray')
+    plt.title('Mask')
+
+    plt.subplot(133)
+    plt.imshow(image.permute(1, 2, 0))
+    pos_coords = torch.where(pos_channel == 1)
+    neg_coords = torch.where(neg_channel == 1)
+    plt.scatter(pos_coords[1], pos_coords[0], c='green', s=100, marker='o', label='Positive')
+    plt.scatter(neg_coords[1], neg_coords[0], c='red', s=100, marker='x', label='Negative')
+    plt.legend()
+    plt.title('Clicks')
+
+    plt.savefig('clicks_visualization.png', dpi=300, bbox_inches='tight')
+    plt.show()
