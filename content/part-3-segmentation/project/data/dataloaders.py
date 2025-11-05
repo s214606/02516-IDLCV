@@ -1,99 +1,140 @@
 from torch.utils.data import DataLoader
-from data.datasets import FrameVideoDataset, FrameImageDataset, FrameFlowDataset
-from data.transforms import transform, transformIMAGENET, transformtestIMAGENET, transformFLOW
-from config import settings
+from datasets import DriveData,PH2
+from transforms import transform, transformIMAGENET, transformtestIMAGENET, transformFLOW
+import os
+#from config import settings
 
-framevideostack_trainset = FrameVideoDataset(
-    root_dir=settings.root_dir,
-    split='train',
-    transform=transformIMAGENET,
-    stack_frames = True
-    )
 
-framevideostack_testset = FrameVideoDataset(
-    root_dir=settings.root_dir,
-    split='val',
-    transform=transformtestIMAGENET,
-    stack_frames = True
-    )
+DriveData_train = DriveData(split='training')
 
-framevideostack_trainloader = DataLoader(
-    framevideostack_trainset,
-    batch_size=32,
-    shuffle=True,
+DriveData_trainloader = DataLoader(
+    DriveData_train,
+    batch_size = 32,
+    shuffle= True,
     num_workers=4
-    )
+)
 
-framevideostack_testloader = DataLoader(
-    framevideostack_testset,
-    batch_size=32,
-    shuffle=False,
+DriveData_val = DriveData(split='val')
+
+DriveData_valloader = DataLoader(
+    DriveData_val,
+    batch_size = 32,
+    shuffle= True,
     num_workers=4
-    )
+)
 
-frameimage_trainset = FrameImageDataset(
-    root_dir=settings.root_dir,
-    split='train',
-    transform=transformIMAGENET
-    )
+DriveData_test = DriveData(split='test')
 
-frameimage_testset = FrameImageDataset(
-    root_dir=settings.root_dir,
-    split='val',
-    transform=transformtestIMAGENET
-    )
-
-frameimage_trainloader = DataLoader(
-    frameimage_trainset, 
-    batch_size=64,
-    shuffle=True,
+DriveData_testloader = DataLoader(
+    DriveData_test,
+    batch_size = 32,
+    shuffle= True,
     num_workers=4
-    )
+)
 
-frameimage_testloader = DataLoader(
-    frameimage_testset,
-    batch_size=64,
-    shuffle=False,
-    num_workers=4)
-
-
-frameflow_trainset = FrameFlowDataset(
-    root_dir=settings.root_dir,
-    split='train',
-    transform=transformFLOW,
-    stack_frames=True  # CHANGED: Added this
-    )
-
-frameflow_valset = FrameFlowDataset(
-    root_dir=settings.root_dir,
-    split='val',
-    transform=None,
-    stack_frames=True  # CHANGED: Added this
-    )
-
-frameflow_testset = FrameFlowDataset(
-    root_dir=settings.root_dir,
-    split='test',  # CHANGED: Changed from 'test' to 'val' - use val as test
-    transform=None,
-    stack_frames=True  # CHANGED: Added this
-    )
+# Print dataset information
+print("=" * 60)
+print("DATASET INFORMATION")
+print("=" * 60)
+print(f"Number of samples: {len(DriveData_train)}")
+print(f"Split: {DriveData_train.split}")
+print(f"\nFirst few image paths:")
+for i, path in enumerate(DriveData_train.image_paths[:3]):
+    print(f"  {i}: {os.path.basename(path)}")
+print(f"\nFirst few mask paths:")
 
 
-frameflow_trainloader = DataLoader(
-    frameflow_trainset, 
-    batch_size=64,
-    shuffle=True,
+
+# Print dataset information
+print("=" * 60)
+print("DATASET INFORMATION")
+print("=" * 60)
+print(f"Number of samples: {len(DriveData_val)}")
+print(f"Split: {DriveData_val.split}")
+print(f"\nFirst few image paths:")
+for i, path in enumerate(DriveData_val.image_paths[:3]):
+    print(f"  {i}: {os.path.basename(path)}")
+print(f"\nFirst few mask paths:")
+
+
+
+# Print dataset information
+print("=" * 60)
+print("DATASET INFORMATION")
+print("=" * 60)
+print(f"Number of samples: {len(DriveData_test)}")
+print(f"Split: {DriveData_test.split}")
+print(f"\nFirst few image paths:")
+for i, path in enumerate(DriveData_test.image_paths[:3]):
+    print(f"  {i}: {os.path.basename(path)}")
+print(f"\nFirst few mask paths:")
+
+
+
+
+PH2_train = PH2(split='train')
+
+PH2_trainloader = DataLoader(
+    PH2_train,
+    batch_size = 32,
+    shuffle= True,
     num_workers=4
-    )
+)
 
-frameflow_valloader = DataLoader(
-    frameflow_valset,
-    batch_size=64,
-    shuffle=False,
-    num_workers=0)
+PH2_val = PH2(split='val')
 
-frameflow_testloader = DataLoader(
-    frameflow_testset,
-    batch_size=64,
-    shuffle=False,
-    num_workers=0)
+PH2_valloader = DataLoader(
+    PH2_val,
+    batch_size = 32,
+    shuffle= True,
+    num_workers=4
+)
+
+PH2_test = PH2(split='test')
+
+PH2_testloader = DataLoader(
+    PH2_test,
+    batch_size = 32,
+    shuffle= True,
+    num_workers=4
+)
+
+# Print dataset information
+print("=" * 60)
+print("DATASET INFORMATION")
+print("=" * 60)
+print(f"Number of samples: {len(PH2_train)}")
+print(f"Split: {PH2_train.split}")
+print(f"\nFirst few image paths:")
+for i, path in enumerate(PH2_train.image_paths[:3]):
+    print(f"  {i}: {os.path.basename(path)}")
+print(f"\nFirst few mask paths:")
+
+
+
+# Print dataset information
+print("=" * 60)
+print("DATASET INFORMATION")
+print("=" * 60)
+print(f"Number of samples: {len(PH2_val)}")
+print(f"Split: {PH2_val.split}")
+print(f"\nFirst few image paths:")
+for i, path in enumerate(PH2_val.image_paths[:3]):
+    print(f"  {i}: {os.path.basename(path)}")
+print(f"\nFirst few mask paths:")
+
+
+
+# Print dataset information
+print("=" * 60)
+print("DATASET INFORMATION")
+print("=" * 60)
+print(f"Number of samples: {len(PH2_test)}")
+print(f"Split: {PH2_test.split}")
+print(f"\nFirst few image paths:")
+for i, path in enumerate(PH2_test.image_paths[:3]):
+    print(f"  {i}: {os.path.basename(path)}")
+print(f"\nFirst few mask paths:")
+
+
+
