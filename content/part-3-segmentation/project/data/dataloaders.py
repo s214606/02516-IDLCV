@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
-from datasets import DriveData,PH2
-from transforms import transform, transformIMAGENET, transformtestIMAGENET, transformFLOW
+from data.datasets import DriveData,PH2
+from data.transforms import transform, transformIMAGENET, transformtestIMAGENET, transformFLOW
 import os
 #from config import settings
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print("DATASET INFORMATION")
     print("=" * 60)
-    
+
     print(f"Number of samples: {len(DriveData_train)}")
     print(f"Split: {DriveData_train.split}")
     print(f"\nFirst few image paths:")
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         print(f"  {i}: {os.path.basename(path)}")
     print(f"\nFirst few mask paths:")
     image, mask = DriveData_train[0]
-    
+
     # Print sample information
     print("\n" + "=" * 60)
     print("FIRST SAMPLE INFORMATION")
@@ -83,8 +83,8 @@ if __name__ == '__main__':
     print(f"Image dtype: {image.dtype}")
     print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
     print(f"\nMask shape: {mask.shape}")
-    
-    
+
+
     # Print dataset information
     print("=" * 60)
     print("DATASET INFORMATION")
@@ -95,9 +95,9 @@ if __name__ == '__main__':
     for i, path in enumerate(DriveData_val.image_paths[:3]):
         print(f"  {i}: {os.path.basename(path)}")
     print(f"\nFirst few mask paths:")
-    
-    
-    
+
+
+
     # Print dataset information
     print("=" * 60)
     print("DATASET INFORMATION")
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     for i, path in enumerate(DriveData_test.image_paths[:3]):
         print(f"  {i}: {os.path.basename(path)}")
     print(f"\nFirst few mask paths:")
-    
+
     # Print dataset information
     print("=" * 60)
     print("DATASET INFORMATION")
@@ -119,9 +119,9 @@ if __name__ == '__main__':
     for i, path in enumerate(PH2_train.image_paths[:3]):
         print(f"  {i}: {os.path.basename(path)}")
     print(f"\nFirst few mask paths:")
-    
-    
-    
+
+
+
     # Print dataset information
     print("=" * 60)
     print("DATASET INFORMATION")
@@ -132,9 +132,9 @@ if __name__ == '__main__':
     for i, path in enumerate(PH2_val.image_paths[:3]):
         print(f"  {i}: {os.path.basename(path)}")
     print(f"\nFirst few mask paths:")
-    
-    
-    
+
+
+
     # Print dataset information
     print("=" * 60)
     print("DATASET INFORMATION")
@@ -145,10 +145,10 @@ if __name__ == '__main__':
     for i, path in enumerate(PH2_test.image_paths[:3]):
         print(f"  {i}: {os.path.basename(path)}")
     print(f"\nFirst few mask paths:")
-    
-    
+
+
     image, mask = PH2_train[0]
-    
+
     # Print sample information
     print("\n" + "=" * 60)
     print("FIRST SAMPLE INFORMATION")
@@ -157,7 +157,6 @@ if __name__ == '__main__':
     print(f"Image dtype: {image.dtype}")
     print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
     print(f"\nMask shape: {mask.shape}")
-    
-    
-    
-    
+
+
+
