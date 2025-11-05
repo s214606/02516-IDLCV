@@ -56,17 +56,17 @@ class DriveData(torch.utils.data.Dataset):
         if self.transform:
             image = self.transform(image)
         
-        image = T.ToTensor()(image)
+        else: 
+            image = T.ToTensor()(image)
         return image
 
     def load_mask(self, path):
         mask = Image.open(path)
-        mask = np.array(mask)
         if self.transform:
             mask = self.transform(mask)
-        
-        if isinstance(mask, np.ndarray):
-            mask = torch.from_numpy(mask).long()
+        if isinstance(mask, torch.Tensor):
+            mask = mask.squeeze().numpy() 
+        mask = torch.from_numpy(mask).long()
         return mask
 
 
@@ -129,11 +129,18 @@ class PH2(torch.utils.data.Dataset):
         return len(self.image_paths)
     
     def __getitem__(self, idx):
-        image = Image.open(self.image_paths[idx]).convert('RGB')
-        mask = Image.open(self.mask_paths[idx]).convert('L')
+        image = Image.open(self.image_paths[idx])
+        mask = Image.open(self.mask_paths[idx])
         if self.transform:
             image = self.transform(image)
             mask = self.transform(mask)
+        
+        else: 
+            image = T.ToTensor()(image)
+        if isinstance(mask, torch.Tensor):
+            mask = mask.squeeze().numpy() 
+        mask = torch.from_numpy(mask).long()
+        
         
         return image, mask
 

@@ -5,7 +5,7 @@ import os
 #from config import settings
 
 
-DriveData_train = DriveData(split='training')
+DriveData_train = DriveData(split='training', transform = transform)
 
 DriveData_trainloader = DataLoader(
     DriveData_train,
@@ -14,7 +14,7 @@ DriveData_trainloader = DataLoader(
     num_workers=4
 )
 
-DriveData_val = DriveData(split='val')
+DriveData_val = DriveData(split='val',transform = transform)
 
 DriveData_valloader = DataLoader(
     DriveData_val,
@@ -23,7 +23,7 @@ DriveData_valloader = DataLoader(
     num_workers=4
 )
 
-DriveData_test = DriveData(split='test')
+DriveData_test = DriveData(split='test',transform = transform)
 
 DriveData_testloader = DataLoader(
     DriveData_test,
@@ -36,13 +36,23 @@ DriveData_testloader = DataLoader(
 print("=" * 60)
 print("DATASET INFORMATION")
 print("=" * 60)
+
 print(f"Number of samples: {len(DriveData_train)}")
 print(f"Split: {DriveData_train.split}")
 print(f"\nFirst few image paths:")
 for i, path in enumerate(DriveData_train.image_paths[:3]):
     print(f"  {i}: {os.path.basename(path)}")
 print(f"\nFirst few mask paths:")
+image, mask = DriveData_train[0]
 
+# Print sample information
+print("\n" + "=" * 60)
+print("FIRST SAMPLE INFORMATION")
+print("=" * 60)
+print(f"Image shape: {image.shape}")
+print(f"Image dtype: {image.dtype}")
+print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
+print(f"\nMask shape: {mask.shape}")
 
 
 # Print dataset information
@@ -72,7 +82,7 @@ print(f"\nFirst few mask paths:")
 
 
 
-PH2_train = PH2(split='train')
+PH2_train = PH2(split='train',transform = transform)
 
 PH2_trainloader = DataLoader(
     PH2_train,
@@ -81,7 +91,7 @@ PH2_trainloader = DataLoader(
     num_workers=4
 )
 
-PH2_val = PH2(split='val')
+PH2_val = PH2(split='val',transform = transform)
 
 PH2_valloader = DataLoader(
     PH2_val,
@@ -90,7 +100,7 @@ PH2_valloader = DataLoader(
     num_workers=4
 )
 
-PH2_test = PH2(split='test')
+PH2_test = PH2(split='test',transform = transform)
 
 PH2_testloader = DataLoader(
     PH2_test,
@@ -135,6 +145,18 @@ print(f"\nFirst few image paths:")
 for i, path in enumerate(PH2_test.image_paths[:3]):
     print(f"  {i}: {os.path.basename(path)}")
 print(f"\nFirst few mask paths:")
+
+
+image, mask = PH2_train[0]
+
+# Print sample information
+print("\n" + "=" * 60)
+print("FIRST SAMPLE INFORMATION")
+print("=" * 60)
+print(f"Image shape: {image.shape}")
+print(f"Image dtype: {image.dtype}")
+print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
+print(f"\nMask shape: {mask.shape}")
 
 
 
