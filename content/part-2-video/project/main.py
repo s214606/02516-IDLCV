@@ -4,15 +4,15 @@ from data.dataloaders import (
     framevideostack_testloader,
     frameimage_trainloader,
     frameimage_testloader,
-    frameflow_testloader,
-    frameflow_valloader,
-    frameflow_trainloader
+    # frameflow_testloader,
+    # frameflow_valloader,
+    # frameflow_trainloader
 )
 from models.early_fusion import EarlyFusion
-#from models.late_fusion import LateFusion
+from models.late_fusion import LateFusion
 from models.single_frame import SingleFrameCNN
 from models.C3D import C3D
-from models.two_stream.vgg8 import TemporalStreamVGG, SpatialStreamVGG
+# from models.two_stream.vgg8 import TemporalStreamVGG, SpatialStreamVGG
 import torch as t
 from config import settings
 import torch.optim as optim
@@ -24,6 +24,7 @@ dataset = settings.root_dir.split('/')[-1]
 
 early_fusion = EarlyFusion(in_size=64)
 early_fusion_optimizer = t.optim.Adam(early_fusion.parameters(), lr=1e-4, weight_decay=1e-5)
+early_fusion_scheduler = optim.lr_scheduler.StepLR(early_fusion_optimizer, step_size=10, gamma=0.1)
 
 early_fusion_experiment = Experiment(
     project_name=project_name,
@@ -35,39 +36,47 @@ early_fusion_experiment = Experiment(
         'loss_function': loss_function,
         'optimizer': early_fusion_optimizer,
         'epochs': epochs,
-        'dataset': dataset
+        'dataset': dataset,
+        'scheduler': early_fusion_scheduler
     },
     )
 
 
-# late_fusion = LateFusion(
-#     num_frames=10,
-#     num_classes=10,
-#     dropout_rate=0.5,
-#     fusion='average_pooling'
-# )
+late_fusion = LateFusion(
+    num_frames=10,
+    num_classes=10,
+    dropout_rate=0.5,
+    fusion='average_pooling'
+)
 
-# late_fusion_optimizer = t.optim.Adam(late_fusion.parameters(), lr=1e-3, weight_decay=1e-5)
-
-# late_fusion_experiment = Experiment(
-#     project_name=project_name,
-#     name='Late Fusion',
-#     config={
-#         'train_loader': framevideostack_trainloader,
-#         'test_loader': framevideostack_testloader,
-#         'model': late_fusion,
-#         'loss_function': loss_function,
-#         'optimizer': late_fusion_optimizer,
-#         'epochs': epochs,
-#         'dataset': dataset,
-#     },
-#     )
+late_fusion_optimizer = t.optim.Adam(late_fusion.parameters(), lr=1e-4, weight_decay=1e-3)
+late_fusion_scheduler = t.optim.lr_scheduler.StepLR(
+    late_fusion_optimizer,
+    step_size=15,
+    gamma=0.1
+    )
+late_fusion_experiment = Experiment(
+    project_name=project_name,
+    name='Late Fusion',
+    config={
+        'train_loader': framevideostack_trainloader,
+        'test_loader': framevideostack_testloader,
+        'model': late_fusion,
+        'loss_function': loss_function,
+        'optimizer': late_fusion_optimizer,
+        'epochs': epochs,
+        'dataset': dataset,
+        'scheduler': late_fusion_scheduler,
+    },
+    )
 
 
 single_frame = SingleFrameCNN(
     num_classes=10,
 )
-single_frame_optimizer = t.optim.Adam(single_frame.parameters(), lr=1e-4, weight_decay=1e-4)
+#single_frame_optimizer = t.optim.Adam(single_frame.parameters(), lr=1e-4, weight_decay=1e-4)
+single_frame_optimizer = t.optim.SGD(single_frame.parameters(), lr=5e-3, momentum=0.9)
+single_frame_scheduler = optim.lr_scheduler.StepLR(single_frame_optimizer, step_size=10, gamma=0.1)
 
 single_frame_experiment = Experiment(
     project_name=project_name,
@@ -80,6 +89,7 @@ single_frame_experiment = Experiment(
         'optimizer': single_frame_optimizer,
         'epochs': epochs,
         'dataset': dataset,
+        'scheduler': single_frame_scheduler
     },
     )
 
@@ -112,42 +122,42 @@ c3d_experiment = Experiment(
     )
 
 
-spatial_stream = SpatialStreamVGG(num_classes=10)
-spatial_optimizer = t.optim.SGD(spatial_stream.parameters(), lr=5e-3, momentum=0.9)
-spatial_scheduler = optim.lr_scheduler.StepLR(spatial_optimizer, step_size=10, gamma=0.1)
+# spatial_stream = SpatialStreamVGG(num_classes=10)
+# spatial_optimizer = t.optim.SGD(spatial_stream.parameters(), lr=5e-3, momentum=0.9)
+# spatial_scheduler = optim.lr_scheduler.StepLR(spatial_optimizer, step_size=10, gamma=0.1)
 
-spatial_experiment = Experiment(
-    project_name=project_name,
-    name='Two-Stream Spatial (RGB)',
-    config={
-        'train_loader': frameimage_trainloader,  # RGB frames only
-        'test_loader': frameimage_testloader,
-        'model': spatial_stream,
-        'loss_function': loss_function,
-        'optimizer': spatial_optimizer,
-        'epochs': epochs,
-        'dataset': dataset,
-    },
-)
+# spatial_experiment = Experiment(
+#     project_name=project_name,
+#     name='Two-Stream Spatial (RGB)',
+#     config={
+#         'train_loader': frameimage_trainloader,  # RGB frames only
+#         'test_loader': frameimage_testloader,
+#         'model': spatial_stream,
+#         'loss_function': loss_function,
+#         'optimizer': spatial_optimizer,
+#         'epochs': epochs,
+#         'dataset': dataset,
+#     },
+# )
 
-temporal_stream = TemporalStreamVGG(num_classes=10, num_frames=9)
-temporal_optimizer = t.optim.SGD(temporal_stream.parameters(), lr=5e-3, momentum=0.9,weight_decay= 1e-4)
-temporal_scheduler = optim.lr_scheduler.StepLR(temporal_optimizer, step_size=25, gamma=0.1)
+# temporal_stream = TemporalStreamVGG(num_classes=10, num_frames=9)
+# temporal_optimizer = t.optim.SGD(temporal_stream.parameters(), lr=5e-3, momentum=0.9,weight_decay= 1e-4)
+# temporal_scheduler = optim.lr_scheduler.StepLR(temporal_optimizer, step_size=25, gamma=0.1)
 
-temporal_experiment = Experiment(
-    project_name=project_name,
-    name='Two-Stream Temporal (Flow)',
-    config={
-        'train_loader': frameflow_trainloader,  # Optical flow only
-        'test_loader': frameflow_valloader,
-        'model': temporal_stream,
-        'loss_function': loss_function,
-        'optimizer': temporal_optimizer,
-        'epochs': epochs,
-        'dataset': dataset,
-        'scheduler':temporal_scheduler,
-    },
-)
+# temporal_experiment = Experiment(
+#     project_name=project_name,
+#     name='Two-Stream Temporal (Flow)',
+#     config={
+#         'train_loader': frameflow_trainloader,  # Optical flow only
+#         'test_loader': frameflow_valloader,
+#         'model': temporal_stream,
+#         'loss_function': loss_function,
+#         'optimizer': temporal_optimizer,
+#         'epochs': epochs,
+#         'dataset': dataset,
+#         'scheduler':temporal_scheduler,
+#     },
+# )
 
 
 
@@ -181,10 +191,10 @@ temporal_experiment = Experiment(
 #t.save(spatial_stream.state_dict(), 'checkpoints/spatial_stream_ultimate_test.pth')
 
 #two_stream_fusion_vgg_experiment.run()
-temporal_experiment.run()
-t.save(temporal_stream.state_dict(), 'checkpoints/temporal_stream_final2.pth')
+#temporal_experiment.run()
+#t.save(temporal_stream.state_dict(), 'checkpoints/temporal_stream_final2.pth')
 
 #single_frame_experiment.run()
-#early_fusion_experiment.run()
+early_fusion_experiment.run()
 #late_fusion_experiment.run()
 #c3d_experiment.run()
