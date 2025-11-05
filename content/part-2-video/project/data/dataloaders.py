@@ -12,21 +12,21 @@ framevideostack_trainset = FrameVideoDataset(
 
 framevideostack_testset = FrameVideoDataset(
     root_dir=settings.root_dir,
-    split='val',
+    split='test',
     transform=transformtestIMAGENET,
     stack_frames = True
     )
 
 framevideostack_trainloader = DataLoader(
     framevideostack_trainset,
-    batch_size=32,
+    batch_size=64,
     shuffle=True,
     num_workers=4
     )
 
 framevideostack_testloader = DataLoader(
     framevideostack_testset,
-    batch_size=32,
+    batch_size=64,
     shuffle=False,
     num_workers=4
     )
@@ -39,7 +39,7 @@ frameimage_trainset = FrameImageDataset(
 
 frameimage_testset = FrameImageDataset(
     root_dir=settings.root_dir,
-    split='val',
+    split='test',
     transform=transformtestIMAGENET
     )
 
