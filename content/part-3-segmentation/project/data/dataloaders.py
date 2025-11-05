@@ -1,7 +1,8 @@
-from torch.utils.data import DataLoader
-from data.datasets import DriveData,PH2
-from data.transforms import transform, transformIMAGENET, transformtestIMAGENET, transformFLOW
 import os
+from torch.utils.data import DataLoader
+
+from .datasets import DriveData,PH2
+from .transforms import transform
 #from config import settings
 
 
