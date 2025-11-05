@@ -6,14 +6,14 @@ import random
 
 
 transform = T.Compose([
-    T.Resize((64, 64)),
-    T.ToTensor()
+    T.Resize((128, 128)),
+    T.ToTensor(),
     ])
 
 # Training transform
 transformIMAGENET = T.Compose([
-    T.Resize(256),                                # Resize shorter side to 256
-    T.RandomCrop(224),                            # Random 224x224 crop
+    T.Resize(128),                                # Resize shorter side to 256
+    T.RandomCrop(128),                            # Random 224x224 crop
     T.RandomHorizontalFlip(p=0.5),               # 50% chance to flip
     T.ColorJitter(
         brightness=0.4,
