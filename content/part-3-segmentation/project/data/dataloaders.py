@@ -32,54 +32,6 @@ DriveData_testloader = DataLoader(
     num_workers=4
 )
 
-# Print dataset information
-print("=" * 60)
-print("DATASET INFORMATION")
-print("=" * 60)
-
-print(f"Number of samples: {len(DriveData_train)}")
-print(f"Split: {DriveData_train.split}")
-print(f"\nFirst few image paths:")
-for i, path in enumerate(DriveData_train.image_paths[:3]):
-    print(f"  {i}: {os.path.basename(path)}")
-print(f"\nFirst few mask paths:")
-image, mask = DriveData_train[0]
-
-# Print sample information
-print("\n" + "=" * 60)
-print("FIRST SAMPLE INFORMATION")
-print("=" * 60)
-print(f"Image shape: {image.shape}")
-print(f"Image dtype: {image.dtype}")
-print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
-print(f"\nMask shape: {mask.shape}")
-
-
-# Print dataset information
-print("=" * 60)
-print("DATASET INFORMATION")
-print("=" * 60)
-print(f"Number of samples: {len(DriveData_val)}")
-print(f"Split: {DriveData_val.split}")
-print(f"\nFirst few image paths:")
-for i, path in enumerate(DriveData_val.image_paths[:3]):
-    print(f"  {i}: {os.path.basename(path)}")
-print(f"\nFirst few mask paths:")
-
-
-
-# Print dataset information
-print("=" * 60)
-print("DATASET INFORMATION")
-print("=" * 60)
-print(f"Number of samples: {len(DriveData_test)}")
-print(f"Split: {DriveData_test.split}")
-print(f"\nFirst few image paths:")
-for i, path in enumerate(DriveData_test.image_paths[:3]):
-    print(f"  {i}: {os.path.basename(path)}")
-print(f"\nFirst few mask paths:")
-
-
 
 
 PH2_train = PH2(split='train',transform = transform)
@@ -109,54 +61,103 @@ PH2_testloader = DataLoader(
     num_workers=4
 )
 
-# Print dataset information
-print("=" * 60)
-print("DATASET INFORMATION")
-print("=" * 60)
-print(f"Number of samples: {len(PH2_train)}")
-print(f"Split: {PH2_train.split}")
-print(f"\nFirst few image paths:")
-for i, path in enumerate(PH2_train.image_paths[:3]):
-    print(f"  {i}: {os.path.basename(path)}")
-print(f"\nFirst few mask paths:")
-
-
-
-# Print dataset information
-print("=" * 60)
-print("DATASET INFORMATION")
-print("=" * 60)
-print(f"Number of samples: {len(PH2_val)}")
-print(f"Split: {PH2_val.split}")
-print(f"\nFirst few image paths:")
-for i, path in enumerate(PH2_val.image_paths[:3]):
-    print(f"  {i}: {os.path.basename(path)}")
-print(f"\nFirst few mask paths:")
-
-
-
-# Print dataset information
-print("=" * 60)
-print("DATASET INFORMATION")
-print("=" * 60)
-print(f"Number of samples: {len(PH2_test)}")
-print(f"Split: {PH2_test.split}")
-print(f"\nFirst few image paths:")
-for i, path in enumerate(PH2_test.image_paths[:3]):
-    print(f"  {i}: {os.path.basename(path)}")
-print(f"\nFirst few mask paths:")
-
-
-image, mask = PH2_train[0]
-
-# Print sample information
-print("\n" + "=" * 60)
-print("FIRST SAMPLE INFORMATION")
-print("=" * 60)
-print(f"Image shape: {image.shape}")
-print(f"Image dtype: {image.dtype}")
-print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
-print(f"\nMask shape: {mask.shape}")
-
-
-
+if __name__ == '__main__':
+    # Print dataset information
+    print("=" * 60)
+    print("DATASET INFORMATION")
+    print("=" * 60)
+    
+    print(f"Number of samples: {len(DriveData_train)}")
+    print(f"Split: {DriveData_train.split}")
+    print(f"\nFirst few image paths:")
+    for i, path in enumerate(DriveData_train.image_paths[:3]):
+        print(f"  {i}: {os.path.basename(path)}")
+    print(f"\nFirst few mask paths:")
+    image, mask = DriveData_train[0]
+    
+    # Print sample information
+    print("\n" + "=" * 60)
+    print("FIRST SAMPLE INFORMATION")
+    print("=" * 60)
+    print(f"Image shape: {image.shape}")
+    print(f"Image dtype: {image.dtype}")
+    print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
+    print(f"\nMask shape: {mask.shape}")
+    
+    
+    # Print dataset information
+    print("=" * 60)
+    print("DATASET INFORMATION")
+    print("=" * 60)
+    print(f"Number of samples: {len(DriveData_val)}")
+    print(f"Split: {DriveData_val.split}")
+    print(f"\nFirst few image paths:")
+    for i, path in enumerate(DriveData_val.image_paths[:3]):
+        print(f"  {i}: {os.path.basename(path)}")
+    print(f"\nFirst few mask paths:")
+    
+    
+    
+    # Print dataset information
+    print("=" * 60)
+    print("DATASET INFORMATION")
+    print("=" * 60)
+    print(f"Number of samples: {len(DriveData_test)}")
+    print(f"Split: {DriveData_test.split}")
+    print(f"\nFirst few image paths:")
+    for i, path in enumerate(DriveData_test.image_paths[:3]):
+        print(f"  {i}: {os.path.basename(path)}")
+    print(f"\nFirst few mask paths:")
+    
+    # Print dataset information
+    print("=" * 60)
+    print("DATASET INFORMATION")
+    print("=" * 60)
+    print(f"Number of samples: {len(PH2_train)}")
+    print(f"Split: {PH2_train.split}")
+    print(f"\nFirst few image paths:")
+    for i, path in enumerate(PH2_train.image_paths[:3]):
+        print(f"  {i}: {os.path.basename(path)}")
+    print(f"\nFirst few mask paths:")
+    
+    
+    
+    # Print dataset information
+    print("=" * 60)
+    print("DATASET INFORMATION")
+    print("=" * 60)
+    print(f"Number of samples: {len(PH2_val)}")
+    print(f"Split: {PH2_val.split}")
+    print(f"\nFirst few image paths:")
+    for i, path in enumerate(PH2_val.image_paths[:3]):
+        print(f"  {i}: {os.path.basename(path)}")
+    print(f"\nFirst few mask paths:")
+    
+    
+    
+    # Print dataset information
+    print("=" * 60)
+    print("DATASET INFORMATION")
+    print("=" * 60)
+    print(f"Number of samples: {len(PH2_test)}")
+    print(f"Split: {PH2_test.split}")
+    print(f"\nFirst few image paths:")
+    for i, path in enumerate(PH2_test.image_paths[:3]):
+        print(f"  {i}: {os.path.basename(path)}")
+    print(f"\nFirst few mask paths:")
+    
+    
+    image, mask = PH2_train[0]
+    
+    # Print sample information
+    print("\n" + "=" * 60)
+    print("FIRST SAMPLE INFORMATION")
+    print("=" * 60)
+    print(f"Image shape: {image.shape}")
+    print(f"Image dtype: {image.dtype}")
+    print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
+    print(f"\nMask shape: {mask.shape}")
+    
+    
+    
+    
