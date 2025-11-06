@@ -3,13 +3,17 @@ from data.dataloaders import (
     DriveData_trainloader,DriveData_testloader,DriveData_valloader,PH2_testloader,PH2_valloader,PH2_testloader
 )
 from models.encoder-decoder import Autoencoder
+from models.u-net import UNet, UNet2
 import torch as t
 from config import settings
 import torch.optim as optim
-
-
+from losses.loss import BCELoss, DiceLoss, FocalLoss #yet to submit BCETotalVariation properly
 
 loss_function = t.nn.CrossEntropyLoss()
+loss_function = BCELoss()
+loss_function = DiceLoss()
+loss_function = FocalLoss()
+
 project_name = 'Video Classification'
 epochs = 50
 dataset = settings.root_dir.split('/')[-1]
