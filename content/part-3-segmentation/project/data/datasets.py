@@ -9,74 +9,47 @@ import matplotlib.pyplot as plt
 
 
 class DriveData(torch.utils.data.Dataset):
-    def __init__(self, 
-    root_dir='/dtu/datasets1/02516/DRIVE',
-    split='training', 
-    transform=None
-):      
-        split_dir = os.path.join(root_dir, split)
-
-        if split == 'training':
-            mask_folder = '1st_manual'
-            mask_ext = 'gif' 
-        else:
-            split_dir = os.path.join(root_dir, 'test')
-            mask_folder = 'mask'
-            mask_ext = 'gif'
-        
-        image_pattern = f'{split_dir}/images/*.tif'
-        mask_pattern = f'{split_dir}/{mask_folder}/*.gif'
-        
-        all_image_paths = sorted(glob(image_pattern))
-        all_mask_paths = sorted(glob(mask_pattern))
-        
-        # split test folder in half 10 images for 'val' 10 for 'test' 
-        if split == 'val':
-            mid_point = len(all_image_paths) // 2
-            self.image_paths = all_image_paths[:mid_point]
-            self.mask_paths = all_mask_paths[:mid_point]
-        elif split == 'test':
-            mid_point = len(all_image_paths) // 2
-            self.image_paths = all_image_paths[mid_point:]
-            self.mask_paths = all_mask_paths[mid_point:]
-        else:  # training
-            self.image_paths = all_image_paths
-            self.mask_paths = all_mask_paths
-
-
-        self.split = split
+    def __init__(self, split='train', transform=None, root_dir='/dtu/datasets1/02516/DRIVE'):
+        'Initialization'
         self.transform = transform
-
+        
+        # Always use training folder (has ground truth)
+        data_path = os.path.join(root_dir, 'training')
+        
+        all_image_paths = sorted(glob(data_path + '/images/*.tif'))
+        all_mask_paths = sorted(glob(data_path + '/1st_manual/*.gif'))
+        
+        # Split into train/val/test: 12/4/4
+        if split == 'train':
+            self.image_paths = all_image_paths[:12]
+            self.mask_paths = all_mask_paths[:12]
+        elif split == 'val':
+            self.image_paths = all_image_paths[12:16]
+            self.mask_paths = all_mask_paths[12:16]
+        elif split == 'test':
+            self.image_paths = all_image_paths[16:20]
+            self.mask_paths = all_mask_paths[16:20]
        
     def __len__(self):
+        'Returns the total number of samples'
         return len(self.image_paths)
 
-    def load_image(self, path):
-        image = Image.open(path)
-        if self.transform:
-            image = self.transform(image)
-        
-        else: 
-            image = T.ToTensor()(image)
-        return image
-
-    def load_mask(self, path):
-        mask = Image.open(path)
-        if self.transform:
-            mask = self.transform(mask)
-        if isinstance(mask, torch.Tensor):
-            mask = mask.squeeze().numpy() 
-        mask = torch.from_numpy(mask).long()
-        return mask
-
-
     def __getitem__(self, idx):
+        'Generates one sample of data'
         image_path = self.image_paths[idx]
-        mask_path = self.mask_paths[idx]        
+        mask_path = self.mask_paths[idx]
         
-        mask = self.load_mask(mask_path)
-        image = self.load_image(image_path)
-        return image, mask
+        image = Image.open(image_path)
+        mask = Image.open(mask_path).convert('L')
+        
+        # Apply transform to both image and mask
+        X = self.transform(image) if self.transform else T.ToTensor()(image)
+        Y = self.transform(mask) if self.transform else T.ToTensor()(mask)
+        
+        # Binarize mask after transform
+        Y = (Y > 0.5).long().squeeze(0)
+        
+        return X, Y
 
 
 

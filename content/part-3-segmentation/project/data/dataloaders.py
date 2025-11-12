@@ -6,31 +6,32 @@ from .transforms import transform
 #from config import settings
 
 
-DriveData_train = DriveData(split='training', transform = transform)
+DriveData_train = DriveData(split='train', transform = transform)
 
 DriveData_trainloader = DataLoader(
     DriveData_train,
-    batch_size = 32,
-    shuffle= True,
-    num_workers=4
+    batch_size = 6,
+    shuffle = True,
+    num_workers = 4
 )
 
 DriveData_val = DriveData(split='val',transform = transform)
 
 DriveData_valloader = DataLoader(
     DriveData_val,
-    batch_size = 32,
-    shuffle= True,
-    num_workers=4
+    batch_size = 6,
+    shuffle = False,
+    num_workers = 4
 )
 
+# This doesn't matter because we only have test and not val
 DriveData_test = DriveData(split='test',transform = transform)
 
 DriveData_testloader = DataLoader(
     DriveData_test,
-    batch_size = 32,
-    shuffle= True,
-    num_workers=4
+    batch_size = 6,
+    shuffle = False,
+    num_workers = 4
 )
 
 
@@ -49,8 +50,8 @@ PH2_val = PH2(split='val',transform = transform)
 PH2_valloader = DataLoader(
     PH2_val,
     batch_size = 32,
-    shuffle= True,
-    num_workers=4
+    shuffle = False,
+    num_workers = 4
 )
 
 PH2_test = PH2(split='test',transform = transform)
@@ -58,8 +59,8 @@ PH2_test = PH2(split='test',transform = transform)
 PH2_testloader = DataLoader(
     PH2_test,
     batch_size = 32,
-    shuffle= True,
-    num_workers=4
+    shuffle = False,
+    num_workers = 4
 )
 
 if __name__ == '__main__':
