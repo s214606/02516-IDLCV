@@ -1,20 +1,12 @@
-# Project 2 - Video classification
+# Project 3 - Segmentation
 
 **Requirements**
-    - Add the data and extract it `unzip ucf101.zip`. It will be saved in the directory ufc10 which is gitignored. DO NOT PUSH THE DATA!
+    - Install uv
 
 **Data**
-There are 10 classes of actions:
- 0. BodyWeightSquats
- 1. HandstandPushups
- 2. HandstandWalking
- 3. JumpingJack
- 4. JumpRope
- 5. Lunges
- 6. PullUps
- 7. PushUps
- 8. TrampolineJumping
- 9. WallPushups
+PH2: 
+DRIVE:
+
 
 **Running batch job**
 
@@ -22,19 +14,20 @@ There are 10 classes of actions:
 bsub < jobscript.sh
 ```
 
-## 4.1 Explore models
-- Aggregate single frames
-- Early fusion
-- Late fusion
-- 3D CNN
+**Running independent files**
+```
+uv run -m data.dataloaders
+```
 
-## 4.2 Leakage between train/test/validation
+## 3.1 Segmentation
+- Encoder decoder
+- Metrics
+- Unet
 
 
-## 4.3 Dual-stream networks
+
+## 3.2 Weak Labels
 
 
 
 # Misc
-- Taking inspiration from structure: https://www.geeksforgeeks.org/deep-learning/how-to-structure-a-pytorch-project/
-- Rich logging (handler): https://github.com/Textualize/rich/discussions/1173

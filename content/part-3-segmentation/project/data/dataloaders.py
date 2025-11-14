@@ -2,11 +2,11 @@ import os
 from torch.utils.data import DataLoader
 import torch
 from data.datasets import DriveData,PH2, PH2Clicks
-from data.transforms import transform
+from data.transforms import train_transform, test_transform
 #from config import settings
 
 
-DriveData_train = DriveData(split='train', transform = transform)
+DriveData_train = DriveData(split='train', transform = train_transform)
 
 DriveData_trainloader = DataLoader(
     DriveData_train,
@@ -15,7 +15,7 @@ DriveData_trainloader = DataLoader(
     num_workers = 4
 )
 
-DriveData_val = DriveData(split='val',transform = transform)
+DriveData_val = DriveData(split='val',transform = test_transform)
 
 DriveData_valloader = DataLoader(
     DriveData_val,
@@ -25,7 +25,7 @@ DriveData_valloader = DataLoader(
 )
 
 # This doesn't matter because we only have test and not val
-DriveData_test = DriveData(split='test',transform = transform)
+DriveData_test = DriveData(split='test',transform = test_transform)
 
 DriveData_testloader = DataLoader(
     DriveData_test,
@@ -36,29 +36,29 @@ DriveData_testloader = DataLoader(
 
 
 
-PH2_train = PH2(split='train',transform = transform)
+PH2_train = PH2(split='train',transform = train_transform)
 
 PH2_trainloader = DataLoader(
     PH2_train,
-    batch_size = 32,
+    batch_size = 6,
     shuffle= True,
     num_workers=4
 )
 
-PH2_val = PH2(split='val',transform = transform)
+PH2_val = PH2(split='val',transform = test_transform)
 
 PH2_valloader = DataLoader(
     PH2_val,
-    batch_size = 32,
+    batch_size = 6,
     shuffle = False,
     num_workers = 4
 )
 
-PH2_test = PH2(split='test',transform = transform)
+PH2_test = PH2(split='test',transform = test_transform)
 
 PH2_testloader = DataLoader(
     PH2_test,
-    batch_size = 32,
+    batch_size = 6,
     shuffle = False,
     num_workers = 4
 )

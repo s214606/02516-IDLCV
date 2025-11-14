@@ -3,9 +3,19 @@ from torchvision.models import vgg16, VGG16_Weights
 import torch
 import torchvision.transforms.functional as TF
 import random
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 
-transform = T.Compose([
+train_transform = T.Compose([
+    T.Resize((128, 128)),
+    #T.RandomRotation(15),
+    #T.RandomCrop(64),
+    #T.RandomHorizontalFlip(p=0.5),
+    T.ToTensor(),
+    ])
+
+test_transform = T.Compose([
     T.Resize((128, 128)),
     T.ToTensor(),
     ])

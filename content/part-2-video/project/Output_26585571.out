@@ -1,0 +1,28 @@
+[10/21/25 23:24:01] INFO     INFO:pipeline:Initializing Weights  pipeline.py:104
+                             & Biases run                                       
+[10/21/25 23:24:03] INFO     INFO:pipeline:Starting experiment   pipeline.py:112
+                    INFO     INFO:pipeline:Moving model to GPU   pipeline.py:115
+Running 50 epochs... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+Training epoch...                                               0% 0:00:00
+Validating epoch...                                             0% 0:00:00
+[10/21/25 23:27:14] INFO     INFO:pipeline:Initializing Weights  pipeline.py:104
+                             & Biases run                                       
+[10/21/25 23:27:15] INFO     INFO:pipeline:Starting experiment   pipeline.py:112
+                    INFO     INFO:pipeline:Moving model to GPU   pipeline.py:115
+Running 50 epochs... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+Training epoch...                                               0% 0:00:00
+Validating epoch...                                             0% 0:00:00
+[10/21/25 23:32:48] INFO     INFO:pipeline:Initializing Weights  pipeline.py:104
+                             & Biases run                                       
+[10/21/25 23:32:49] INFO     INFO:pipeline:Starting experiment   pipeline.py:112
+                    INFO     INFO:pipeline:Moving model to GPU   pipeline.py:115
+Running 50 epochs... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+Training epoch...                                               0% 0:00:00
+Validating epoch...                                             0% 0:00:00
+[10/21/25 23:43:31] INFO     INFO:pipeline:Initializing Weights  pipeline.py:104
+                             & Biases run                                       
+[10/21/25 23:44:04] INFO     INFO:pipeline:Starting experiment   pipeline.py:112
+                    INFO     INFO:pipeline:Moving model to GPU   pipeline.py:115
+Running 50 epochs... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+Training epoch...                                               0% 0:00:00
+Validating epoch...                                             0% 0:00:00

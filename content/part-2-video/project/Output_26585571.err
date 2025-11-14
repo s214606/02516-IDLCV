@@ -1,0 +1,109 @@
+/zhome/bf/3/167804/02516-IDLCV/.venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+/zhome/bf/3/167804/02516-IDLCV/.venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'frozen' attribute with value True was provided to the `Field()` function, which has no effect in the context it was used. 'frozen' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+  warnings.warn(
+wandb: Currently logged in as: s214606 (IDLCV) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run n58rdcsb
+wandb: Tracking run with wandb version 0.22.2
+wandb: Run data is saved locally in /zhome/bf/3/167804/02516-IDLCV/content/part-2-video/project/wandb/run-20251021_232402-n58rdcsb
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run Single-Frame CNN
+wandb: ⭐️ View project at https://wandb.ai/IDLCV/Video%20Classification
+wandb: 🚀 View run at https://wandb.ai/IDLCV/Video%20Classification/runs/n58rdcsb
+wandb: updating run metadata
+wandb: uploading history steps 47-49, summary, console lines 2-4
+wandb: 
+wandb: Run history:
+wandb:      accuracy/train ▁▆▇▇▇▇█▇▇▇█▇▇▇███▇████████████▇█▇██████▇
+wandb: accuracy/validation ▅▁▃▆█▅▆▇▇▆▃▆▇▇▇▇▇▆▄▆▆▇▇▆▆▆▆▆▆▄▁▆▆▇▇█▇▇▆▇
+wandb:          loss/train █▃▂▂▂▂▁▂▁▁▁▂▂▁▁▁▁▁▂▁▂▁▁▁▁▁▁▁▁▁▂▁▂▁▁▁▁▁▁▁
+wandb:     loss/validation █▄▄▃▂▁▃▃▂▂▂▆▂▂▁▁▃▃▃▂▄▂▂▂▂▂▃▂▃▄▃▇▄▄▃▂▂▂▃▂
+wandb: 
+wandb: Run summary:
+wandb:      accuracy/train 75.46
+wandb: accuracy/validation 88.08333
+wandb:          loss/train 0.66217
+wandb:     loss/validation 0.48854
+wandb: 
+wandb: 🚀 View run Single-Frame CNN at: https://wandb.ai/IDLCV/Video%20Classification/runs/n58rdcsb
+wandb: ⭐️ View project at: https://wandb.ai/IDLCV/Video%20Classification
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20251021_232402-n58rdcsb/logs
+wandb: setting up run llpny6jq
+wandb: Tracking run with wandb version 0.22.2
+wandb: Run data is saved locally in /zhome/bf/3/167804/02516-IDLCV/content/part-2-video/project/wandb/run-20251021_232714-llpny6jq
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run Early Fusion
+wandb: ⭐️ View project at https://wandb.ai/IDLCV/Video%20Classification
+wandb: 🚀 View run at https://wandb.ai/IDLCV/Video%20Classification/runs/llpny6jq
+wandb: updating run metadata
+wandb: uploading history steps 49-49, summary, console lines 2-4
+wandb: 
+wandb: Run history:
+wandb:      accuracy/train ▁▂▃▃▄▅▅▆▆▇▇▇▇███████████████▇███████████
+wandb: accuracy/validation ▁▂▄▅▃▆▆▆▇▇▇▇█▇▇▇▇▇█▇▇█▇█▇███▇▇▇███▇▇▇██▇
+wandb:          loss/train █▆▆▅▅▄▃▃▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:     loss/validation █▇▆▅▇▃▃▃▂▁▁▂▂▂▁▂▂▂▃▂▃▁▄▂▁▁▃▃▃▂▂▃▂▃▃▂▂▂▂▂
+wandb: 
+wandb: Run summary:
+wandb:      accuracy/train 98
+wandb: accuracy/validation 80
+wandb:          loss/train 0.0537
+wandb:     loss/validation 0.83158
+wandb: 
+wandb: 🚀 View run Early Fusion at: https://wandb.ai/IDLCV/Video%20Classification/runs/llpny6jq
+wandb: ⭐️ View project at: https://wandb.ai/IDLCV/Video%20Classification
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20251021_232714-llpny6jq/logs
+wandb: setting up run bq1u1m2y
+wandb: Tracking run with wandb version 0.22.2
+wandb: Run data is saved locally in /zhome/bf/3/167804/02516-IDLCV/content/part-2-video/project/wandb/run-20251021_233248-bq1u1m2y
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run Late Fusion
+wandb: ⭐️ View project at https://wandb.ai/IDLCV/Video%20Classification
+wandb: 🚀 View run at https://wandb.ai/IDLCV/Video%20Classification/runs/bq1u1m2y
+wandb: updating run metadata
+wandb: uploading history steps 49-49, summary, console lines 2-4
+wandb: 
+wandb: Run history:
+wandb:      accuracy/train ▃▂▅▄▆▄▃▃▁▂▁▄▅▃▄▃▄▃▅▆▆▆▆▃▃▅▅▅▇█▆▅▅▆▇▆▅▆▃▄
+wandb: accuracy/validation ▅▃▄█▄▂▄▅▁▂▂▂▅▂▇▂▁▇▆▂▄▇▅▂▁▂▇▂▃▇▇▅▃▅▆▂▄▅▂▄
+wandb:          loss/train █▂▂▂▂▁▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▂▂▁▁▁▁▁▂▂▁▂▂▁▁▁▂
+wandb:     loss/validation ▁▁▁▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb: 
+wandb: Run summary:
+wandb:      accuracy/train 11.6
+wandb: accuracy/validation 12.5
+wandb:          loss/train 2.28659
+wandb:     loss/validation 2.25859
+wandb: 
+wandb: 🚀 View run Late Fusion at: https://wandb.ai/IDLCV/Video%20Classification/runs/bq1u1m2y
+wandb: ⭐️ View project at: https://wandb.ai/IDLCV/Video%20Classification
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20251021_233248-bq1u1m2y/logs
+wandb: setting up run k955sdhn
+wandb: Tracking run with wandb version 0.22.2
+wandb: Run data is saved locally in /zhome/bf/3/167804/02516-IDLCV/content/part-2-video/project/wandb/run-20251021_234331-k955sdhn
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run 3D CNN
+wandb: ⭐️ View project at https://wandb.ai/IDLCV/Video%20Classification
+wandb: 🚀 View run at https://wandb.ai/IDLCV/Video%20Classification/runs/k955sdhn
+wandb: updating run metadata
+wandb: uploading history steps 49-49, summary, console lines 2-4
+wandb: 
+wandb: Run history:
+wandb:      accuracy/train ▁▁▁▂▂▂▂▃▃▃▄▄▄▅▅▅▅▅▆▆▆▆▆▇▆▇▇▇▇▇█▇▇████▇██
+wandb: accuracy/validation ▁▁▁▂▁▂▂▃▄▃▄▅▅▅▅▅▆▆▆▆▆▆▇▇▇▇▇▇▇▇▇███▇█████
+wandb:          loss/train █▆▆▆▆▆▆▆▅▅▅▅▅▄▄▄▄▃▃▃▃▃▃▂▂▂▂▂▂▂▁▂▂▁▁▁▂▂▁▁
+wandb:     loss/validation █████▇▇▇▆▆▅▅▄▄▄▄▄▄▃▃▃▃▂▃▃▂▂▂▁▂▂▁▁▁▁▁▂▁▁▂
+wandb: 
+wandb: Run summary:
+wandb:      accuracy/train 78
+wandb: accuracy/validation 75.83333
+wandb:          loss/train 0.5264
+wandb:     loss/validation 1.03271
+wandb: 
+wandb: 🚀 View run 3D CNN at: https://wandb.ai/IDLCV/Video%20Classification/runs/k955sdhn
+wandb: ⭐️ View project at: https://wandb.ai/IDLCV/Video%20Classification
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20251021_234331-k955sdhn/logs

@@ -41,14 +41,14 @@ class DriveData(torch.utils.data.Dataset):
         mask_path = self.mask_paths[idx]
         
         image = Image.open(image_path)
-        mask = Image.open(mask_path).convert('L')
+        mask = Image.open(mask_path)
         
         # Apply transform to both image and mask
-        X = self.transform(image) if self.transform else T.ToTensor()(image)
-        Y = self.transform(mask) if self.transform else T.ToTensor()(mask)
+        X = self.transform(image)
+        Y = self.transform(mask)
         
         # Binarize mask after transform
-        Y = (Y > 0.5).long().squeeze(0)
+        #Y = (Y > 0.5)#.long()#.squeeze(0)
         
         return X, Y
 
@@ -105,15 +105,9 @@ class PH2(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         image = Image.open(self.image_paths[idx])
         mask = Image.open(self.mask_paths[idx])
-        if self.transform:
-            image = self.transform(image)
-            mask = self.transform(mask)
         
-        else: 
-            image = T.ToTensor()(image)
-        if isinstance(mask, torch.Tensor):
-            mask = mask.squeeze().numpy() 
-        mask = torch.from_numpy(mask).long()
+        image = self.transform(image)
+        mask = self.transform(mask)
         
         
         return image, mask

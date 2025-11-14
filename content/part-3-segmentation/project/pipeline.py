@@ -1,13 +1,16 @@
 import torch as t
+import torch.nn.functional as F
 import wandb
 from utils.logger import get_logger
 from config import settings
 from typing import Dict, Any
 from rich.progress import Progress
-from metrics.classification import Accuracy
+from metrics.segmentation import Accuracy, IoU, DiceScore
+import matplotlib.pyplot as plt
+import numpy as np
 
 logger = get_logger(__name__) 
-
+threshold = 0.5
 class Experiment:
     """
     Required in config:
@@ -25,7 +28,12 @@ class Experiment:
         self.progress = Progress()
 
         self.train_accuracy = Accuracy()
+        self.train_dice = DiceScore()
+        self.train_iou = IoU()
+
         self.val_accuracy = Accuracy()
+        self.val_dice = DiceScore()
+        self.val_iou = IoU()
 
         self.task = self.progress.add_task(
             f"[red]Running {self.config['epochs']} epochs...",
@@ -60,24 +68,36 @@ class Experiment:
             self.config['optimizer'].step()
             
             # Update metrics
-            self.train_accuracy.update(logits, y)
+            probs = F.sigmoid(logits) 
+            logger.info(f"PROBS SHAPE {probs.shape}")
+            logger.info("Probs min max: {} / {}".format(probs.min().item(), probs.max().item()))
+            self.train_accuracy.update(probs, y, threshold=threshold)
+            self.train_dice.update(probs, y, threshold=threshold)
+            self.train_iou.update(probs, y, threshold=threshold)
             total_loss += loss.item()
             num_batches += 1
-            
+
+            if num_batches % 2 == 0:
+                # Plot predictions to file using matplotlib
+                logger.info("Plotting predictions for debugging")
+                self._plot_predictions(X, y, probs, num_batches, epoch, phase='train')
+
             self.progress.update(self.task_train, advance=1)
         
-        if self.config['scheduler']:
+        if self.config.get('scheduler') is not None:
             before_lr = self.config['optimizer'].param_groups[0]['lr']
             self.config['scheduler'].step()
             after_lr = self.config['optimizer'].param_groups[0]['lr']
 
             if before_lr != after_lr:
-                logger.info("Epoch %d: SGD lr %.4f -> %.4f" % (epoch, before_lr, after_lr))
+                logger.info("Epoch %d: lr %.4f -> %.4f" % (epoch, before_lr, after_lr))
 
 
         return {
             'loss/train': total_loss / num_batches,
-            'accuracy/train': self.train_accuracy.compute()
+            'accuracy/train': self.train_accuracy.compute(),
+            'dice/train': self.train_dice.compute(),
+            'iou/train': self.train_iou.compute()
         }
 
     def eval(self, epoch):
@@ -93,7 +113,10 @@ class Experiment:
                 loss = self.config['loss_function'](logits, y)
                 
                 # Update metrics
-                self.val_accuracy.update(logits, y)
+                probs = F.sigmoid(logits) 
+                self.val_accuracy.update(probs, y, threshold=threshold)
+                self.val_dice.update(probs, y, threshold=threshold)
+                self.val_iou.update(probs, y, threshold=threshold)
                 total_loss += loss.item()
                 num_batches += 1
                 
@@ -101,7 +124,9 @@ class Experiment:
         
         return {
             'loss/validation': total_loss / num_batches,
-            'accuracy/validation': self.val_accuracy.compute()
+            'accuracy/validation': self.val_accuracy.compute(),
+            'dice/validation': self.val_dice.compute(),
+            'iou/validation': self.val_iou.compute()
         }
 
     def run(self):
@@ -116,8 +141,9 @@ class Experiment:
         logger.info("Starting experiment")
         self.progress.start()
         
-        logger.info("Moving model to GPU")
+        logger.info(f"Detected device: {settings.device}")
         self.config['model'].to(settings.device)
+        logger.info("Moved model to GPU")
 
         try:
             for epoch in range(1, self.config['epochs'] + 1):
@@ -125,8 +151,6 @@ class Experiment:
                 test_results = self.eval(epoch)
 
                 self.experiment.log(train_results | test_results)
-                if 'scheduler' in self.config:
-                    self.config['scheduler'].step()
                 
                 self.progress.reset(self.task_train)
                 self.progress.reset(self.task_val)
@@ -139,3 +163,51 @@ class Experiment:
             self.progress.stop()
             self.experiment.finish()
 
+    def _plot_predictions(self, X, y, probs, batch_idx, epoch, phase='train'):
+        """Plot predictions vs true masks for debugging"""
+        # Convert tensors to numpy for plotting
+        X_np = X.detach().cpu().numpy()
+        y_np = y.detach().cpu().numpy().squeeze()  # Assuming y has shape [batch, 1, H, W]
+        preds_np = (probs.detach().cpu().numpy() > threshold).astype(np.float32)
+        
+        # Plot first 4 samples in the batch
+        n_samples = min(4, X.shape[0])
+        
+        fig, axes = plt.subplots(n_samples, 3, figsize=(12, 4*n_samples))
+        if n_samples == 1:
+            axes = axes.reshape(1, -1)
+        
+        for i in range(n_samples):
+            # Input image
+            img = X_np[i].transpose(1, 2, 0)
+            if img.shape[2] == 1:  # Grayscale
+                img = img.squeeze()
+                axes[i, 0].imshow(img, cmap='gray')
+            else:  # RGB
+                # Denormalize if needed
+                if img.min() < 0 or img.max() > 1:
+                    img = (img - img.min()) / (img.max() - img.min())
+                axes[i, 0].imshow(img)
+
+            axes[i, 0].set_title(f'Input Image')
+            axes[i, 0].axis('off')
+            
+            # True mask
+            # y_np has shape [batch, H, W] with no channel dimension
+            axes[i, 1].imshow(y_np[i], cmap='gray')
+            axes[i, 1].set_title('True Mask')
+            axes[i, 1].axis('off')
+            
+            # Prediction
+            # preds_np has shape [batch, 1, H, W] with channel dimension
+            pred_mask = preds_np[i, 0] if preds_np.ndim == 4 else preds_np[i]
+            axes[i, 2].imshow(pred_mask, cmap='gray')
+            axes[i, 2].set_title('Predicted Mask')
+            axes[i, 2].axis('off')
+        
+        plt.suptitle(f'Epoch {epoch}, {phase} batch {batch_idx}', fontsize=16)
+        plt.tight_layout()
+        
+        # Save to file
+        plt.savefig(f'./results/debug_{phase}_epoch{epoch}_batch{batch_idx}.png', dpi=100, bbox_inches='tight')
+        plt.close()
