@@ -67,15 +67,65 @@ PH2_testloader = DataLoader(
 
 
 # Wrap with clicks
-PH2_clicks = PH2Clicks(
+# PH2_clicks = PH2Clicks(
+#     base_dataset=PH2_train,
+#     positive_clicks=3,
+#     negative_clicks=3,
+#     centered=False,
+#     boundary_width=5,
+#     seed=None
+# )
+
+# Wrap with clicks
+PH2_train_clicks = PH2Clicks(
     base_dataset=PH2_train,
     positive_clicks=3,
     negative_clicks=3,
     centered=False,
     boundary_width=5,
-    seed=None
+    seed=42
 )
 
+PH2_clicks_trainloader = DataLoader(
+    PH2_train_clicks,
+    batch_size = 6,
+    shuffle = False,
+    num_workers = 4
+)
+
+# Wrap with clicks
+PH2_val_clicks = PH2Clicks(
+    base_dataset=PH2_val,
+    positive_clicks=3,
+    negative_clicks=3,
+    centered=False,
+    boundary_width=5,
+    seed=42
+)
+
+PH2_clicks_valloader = DataLoader(
+    PH2_val_clicks,
+    batch_size = 6,
+    shuffle = False,
+    num_workers = 4
+)
+
+# Wrap with clicks
+PH2_test_clicks = PH2Clicks(
+    base_dataset=PH2_test,
+    positive_clicks=3,
+    negative_clicks=3,
+    centered=False,
+    boundary_width=5,
+    seed=42
+)
+
+PH2_clicks_testloader = DataLoader(
+    PH2_test_clicks,
+    batch_size = 6,
+    shuffle = False,
+    num_workers = 4
+)
 
 
 if __name__ == '__main__':
