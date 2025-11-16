@@ -62,17 +62,32 @@ class DiceLoss(nn.Module):
         return loss
 
 class FocalLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, alpha=0.25, gamma=2.0):
         super().__init__()
+        self.alpha = alpha
+        self.gamma = gamma
 
     def forward(self, y_pred, y_true):
-        gamma = 2
+        # Apply sigmoid to get probabilities
         pred = torch.sigmoid(y_pred)
-
-        calc = (((1-pred)**gamma)*(y_true*pred))+((1-y_true)*pred)
-        loss = calc.mean()
-        return loss
-    
+        
+        # Convert y_true to float
+        y_true = y_true.float()
+        
+        # Focal loss formula:
+        # FL = -alpha * (1-p)^gamma * log(p) for y=1
+        # FL = -(1-alpha) * p^gamma * log(1-p) for y=0
+        
+        # Numerical stability: clamp predictions
+        pred = torch.clamp(pred, min=1e-7, max=1-1e-7)
+        
+        # Compute focal loss
+        pos_loss = -self.alpha * ((1 - pred) ** self.gamma) * torch.log(pred)
+        neg_loss = -(1 - self.alpha) * (pred ** self.gamma) * torch.log(1 - pred)
+        
+        loss = y_true * pos_loss + (1 - y_true) * neg_loss
+        
+        return loss.mean()
     
 class BCELoss_TotalVariation(nn.Module):
     def __init__(self):
@@ -83,3 +98,28 @@ class BCELoss_TotalVariation(nn.Module):
         regularization = torch.mean()
         return loss + 0.1*regularization
 
+class BCELossWeighted(nn.Module):
+    def __init__(self, pos_weight=None):
+        super().__init__()
+        self.pos_weight = pos_weight
+        
+    def forward(self, y_pred, y_true):
+        # Convert y_true to float immediately
+        y_true = y_true.float()
+        
+        # If pos_weight not provided, calculate it from the batch
+        if self.pos_weight is None:
+            num_pos = y_true.sum()
+            num_neg = (1 - y_true).sum()
+            # Avoid division by zero
+            if num_pos > 0:
+                pos_weight = num_neg / num_pos
+            else:
+                pos_weight = 1.0
+        else:
+            pos_weight = self.pos_weight
+            
+        # Weighted BCE formula
+        loss = pos_weight * (y_true * torch.log(1 + torch.exp(-y_pred))) + \
+               (1 - y_true) * torch.log(1 + torch.exp(y_pred))
+        return torch.mean(loss)

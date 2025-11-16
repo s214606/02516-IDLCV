@@ -125,3 +125,61 @@ class IoU(BaseMetric):
         if self.union > 0:
             return (self.intersection / self.union) * 100.0
         return 0.0
+
+
+class Sensitivity(BaseMetric):
+    """Sensitivity / Recall / True Positive Rate"""
+    def reset(self):
+        self.true_positives = 0
+        self.false_negatives = 0
+
+    def update(self, predictions, labels, threshold=0.5):
+        """
+        predictions: [B, 1, H, W], sigmoid output (0–1)
+        labels: [B, 1, H, W], binary 0/1 mask
+        """
+        preds = (predictions > threshold).long()
+        labels = labels.long()
+
+        # True Positives: predicted=1, actual=1
+        tp = (preds * labels).sum().item()
+        # False Negatives: predicted=0, actual=1
+        fn = ((1 - preds) * labels).sum().item()
+
+        self.true_positives += tp
+        self.false_negatives += fn
+
+    def compute(self):
+        denominator = self.true_positives + self.false_negatives
+        if denominator > 0:
+            return (self.true_positives / denominator) * 100.0
+        return 0.0
+
+
+class Specificity(BaseMetric):
+    """Specificity / True Negative Rate"""
+    def reset(self):
+        self.true_negatives = 0
+        self.false_positives = 0
+
+    def update(self, predictions, labels, threshold=0.5):
+        """
+        predictions: [B, 1, H, W], sigmoid output (0–1)
+        labels: [B, 1, H, W], binary 0/1 mask
+        """
+        preds = (predictions > threshold).long()
+        labels = labels.long()
+
+        # True Negatives: predicted=0, actual=0
+        tn = ((1 - preds) * (1 - labels)).sum().item()
+        # False Positives: predicted=1, actual=0
+        fp = (preds * (1 - labels)).sum().item()
+
+        self.true_negatives += tn
+        self.false_positives += fp
+
+    def compute(self):
+        denominator = self.true_negatives + self.false_positives
+        if denominator > 0:
+            return (self.true_negatives / denominator) * 100.0
+        return 0.0

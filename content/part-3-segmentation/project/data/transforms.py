@@ -8,15 +8,16 @@ from albumentations.pytorch import ToTensorV2
 
 
 train_transform = T.Compose([
-    T.Resize((128, 128)),
+    T.Resize((256, 256)),
     #T.RandomRotation(15),
     #T.RandomCrop(64),
     #T.RandomHorizontalFlip(p=0.5),
     T.ToTensor(),
+    
     ])
 
 test_transform = T.Compose([
-    T.Resize((128, 128)),
+    T.Resize((256, 256)),
     T.ToTensor(),
     ])
 

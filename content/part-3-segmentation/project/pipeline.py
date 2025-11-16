@@ -5,7 +5,7 @@ from utils.logger import get_logger
 from config import settings
 from typing import Dict, Any
 from rich.progress import Progress
-from metrics.segmentation import Accuracy, IoU, DiceScore
+from metrics.segmentation import Accuracy, IoU, DiceScore, Sensitivity, Specificity
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -30,10 +30,21 @@ class Experiment:
         self.train_accuracy = Accuracy()
         self.train_dice = DiceScore()
         self.train_iou = IoU()
+        self.train_sensitivity = Sensitivity()
+        self.train_specificity = Specificity()
 
         self.val_accuracy = Accuracy()
         self.val_dice = DiceScore()
         self.val_iou = IoU()
+        self.val_sensitivity = Sensitivity()
+        self.val_specificity = Specificity()
+
+        self.test_accuracy = Accuracy()
+        self.test_dice = DiceScore()
+        self.test_iou = IoU()
+        self.test_sensitivity = Sensitivity()
+        self.test_specificity = Specificity()
+      
 
         self.task = self.progress.add_task(
             f"[red]Running {self.config['epochs']} epochs...",
@@ -48,6 +59,12 @@ class Experiment:
         self.task_val = self.progress.add_task(
             "[blue]Validating epoch...",
             total=len(self.config['val_loader'])
+            )
+        
+        self.task_test = self.progress.add_task(
+            "[yellow]Testing on test set...",
+            total=len(self.config.get('test_loader', [])) if self.config.get('test_loader') else 0,
+            visible=False  # Hide until test phase
             )
         
     def _parse_config(self):
@@ -69,18 +86,20 @@ class Experiment:
             
             # Update metrics
             probs = F.sigmoid(logits) 
-            logger.info(f"PROBS SHAPE {probs.shape}")
-            logger.info("Probs min max: {} / {}".format(probs.min().item(), probs.max().item()))
+            #logger.info(f"PROBS SHAPE {probs.shape}")
+            #logger.info("Probs min max: {} / {}".format(probs.min().item(), probs.max().item()))
             self.train_accuracy.update(probs, y, threshold=threshold)
             self.train_dice.update(probs, y, threshold=threshold)
             self.train_iou.update(probs, y, threshold=threshold)
+            self.train_sensitivity.update(probs, y, threshold=threshold)
+            self.train_specificity.update(probs, y, threshold=threshold)
             total_loss += loss.item()
             num_batches += 1
 
-            if num_batches % 2 == 0:
-                # Plot predictions to file using matplotlib
-                logger.info("Plotting predictions for debugging")
-                self._plot_predictions(X, y, probs, num_batches, epoch, phase='train')
+            # if epoch % 5 == 0:
+            #     #Plot predictions to file using matplotlib
+            #     logger.info("Plotting predictions for debugging")
+            #     self._plot_predictions(X, y, probs, num_batches, epoch, phase='train')
 
             self.progress.update(self.task_train, advance=1)
         
@@ -97,8 +116,10 @@ class Experiment:
             'loss/train': total_loss / num_batches,
             'accuracy/train': self.train_accuracy.compute(),
             'dice/train': self.train_dice.compute(),
-            'iou/train': self.train_iou.compute()
-        }
+            'iou/train': self.train_iou.compute(),
+            'sensitivity/train':self.train_sensitivity.compute(),
+            'specificity/train':self.train_specificity.compute(),
+            }
 
     def eval(self, epoch):
         self.config['model'].eval()
@@ -117,6 +138,8 @@ class Experiment:
                 self.val_accuracy.update(probs, y, threshold=threshold)
                 self.val_dice.update(probs, y, threshold=threshold)
                 self.val_iou.update(probs, y, threshold=threshold)
+                self.val_sensitivity.update(probs, y, threshold=threshold)
+                self.val_specificity.update(probs, y, threshold=threshold)
                 total_loss += loss.item()
                 num_batches += 1
                 
@@ -126,7 +149,53 @@ class Experiment:
             'loss/validation': total_loss / num_batches,
             'accuracy/validation': self.val_accuracy.compute(),
             'dice/validation': self.val_dice.compute(),
-            'iou/validation': self.val_iou.compute()
+            'iou/validation': self.val_iou.compute(),
+            'specificity/validation': self.val_specificity.compute(),
+            'sensitivity/validation': self.val_sensitivity.compute(),
+        }
+
+    def test(self):
+        """Evaluate model on test set after training is complete"""
+        if 'test_loader' not in self.config or self.config['test_loader'] is None:
+            logger.warning("No test_loader provided in config, skipping test evaluation")
+            return {}
+        
+        logger.info("Running final evaluation on test set...")
+        self.config['model'].eval()
+        total_loss = 0.0
+        num_batches = 0
+        self.test_accuracy.reset()
+        
+        # Make test progress bar visible
+        self.progress.update(self.task_test, visible=True)
+        
+        with t.no_grad():
+            for X, y in self.config['test_loader']:
+                X, y = X.to(settings.device), y.to(settings.device)
+                logits = self.config['model'](X)
+                loss = self.config['loss_function'](logits, y)
+                
+                # Update metrics
+                probs = F.sigmoid(logits) 
+                self.test_accuracy.update(probs, y, threshold=threshold)
+                self.test_dice.update(probs, y, threshold=threshold)
+                self.test_iou.update(probs, y, threshold=threshold)
+                self.test_sensitivity.update(probs, y, threshold=threshold)
+                self.test_specificity.update(probs, y, threshold=threshold)
+                total_loss += loss.item()
+                num_batches += 1
+                
+                self.progress.update(self.task_test, advance=1)
+        
+        logger.info("Test evaluation complete")
+        
+        return {
+            'loss/test': total_loss / num_batches,
+            'accuracy/test': self.test_accuracy.compute(),
+            'dice/test': self.test_dice.compute(),
+            'iou/test': self.test_iou.compute(),
+            'specificity/test': self.test_specificity.compute(),
+            'sensitivity/test': self.test_sensitivity.compute(),
         }
 
     def run(self):
@@ -155,6 +224,12 @@ class Experiment:
                 self.progress.reset(self.task_train)
                 self.progress.reset(self.task_val)
                 self.progress.update(self.task, advance=1)
+            
+            # Run test evaluation after all training epochs
+            test_results = self.test()
+            if test_results:
+                self.experiment.log(test_results)
+                logger.info(f"Test Results: {test_results}")
 
         except Exception as e: # TODO: 
             logger.error(f"Experiment run failed with error: {e}")

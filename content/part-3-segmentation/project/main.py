@@ -10,11 +10,11 @@ from data.dataloaders import (
     PH2_testloader
 )
 from models.encoder_decoder import Autoencoder, EncDec
-from models.u_net import UNet
+from models.u_net import UNet256
 
 from config import settings
 from losses.BCELoss import BCELoss
-from losses.loss import FocalLoss, DiceLoss
+from losses.loss import FocalLoss, DiceLoss, BCELossWeighted
 
 import segmentation_models_pytorch as smp
 
@@ -24,23 +24,26 @@ model = smp.Unet(
     in_channels=3,                   # input channels (RGB)
     classes=1,                       # output channels (binary mask)
 )
+unet = UNet256()
+encdec = EncDec()
 
-loss_function = DiceLoss() #t.nn.CrossEntropyLoss()
+loss_function = DiceLoss()
 project_name = 'Segmentation'
 epochs = 70
 dataset = settings.root_dir.split('/')[-1]
 
 
-# drive_cnn = model#UNet()
-# drive_cnn_optimizer = t.optim.Adam(drive_cnn.parameters(), lr= 1e-3)#, weight_decay= 1e-5)
+# drive_cnn = encdec#UNet()
+# drive_cnn_optimizer = t.optim.Adam(drive_cnn.parameters(), lr= 5e-5, weight_decay= 1e-5)
 # drive_cnn_scheduler = t.optim.lr_scheduler.StepLR(
 #     drive_cnn_optimizer,
-#     step_size=20,
+#     step_size=70,
 #     gamma=0.5
 #     )
+    
 # drive_cnn_experiment = Experiment(
 #     project_name=project_name,
-#     name = 'Autoencoder-CNN (Retinal Data)',
+#     name = 'Enc-Dec (Retinal Data), Loss: Focal Loss ',
 #     config={
 #         'train_loader': DriveData_trainloader,
 #         'val_loader': DriveData_valloader,
@@ -54,8 +57,8 @@ dataset = settings.root_dir.split('/')[-1]
 #     }
 # )
 
-ph2 = model#UNet()
-ph2_optimizer = t.optim.Adam(ph2.parameters(), lr= 1e-3)#, weight_decay= 1e-5)
+ph2 = unet
+ph2_optimizer = t.optim.Adam(ph2.parameters(), lr= 5e-4)#, weight_decay= 1e-5)
 ph2_scheduler = t.optim.lr_scheduler.StepLR(
     ph2_optimizer,
     step_size=20,
@@ -63,7 +66,7 @@ ph2_scheduler = t.optim.lr_scheduler.StepLR(
     )
 ph2_experiment = Experiment(
     project_name=project_name,
-    name = 'Autoencoder-CNN (PH2 Data)',
+    name = 'Encoder-Decoder  (PH2 Data)',
     config={
         'train_loader': PH2_trainloader,
         'val_loader': PH2_valloader,
@@ -73,7 +76,7 @@ ph2_experiment = Experiment(
         'optimizer': ph2_optimizer,
         'epochs': epochs,
         'dataset': dataset,
-        'scheduler': None
+        'scheduler': ph2_scheduler
     }
 )
 
