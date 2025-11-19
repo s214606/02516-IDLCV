@@ -7,36 +7,31 @@ import torch
 from torchvision import transforms as T
 import matplotlib.pyplot as plt
 from scipy.ndimage import distance_transform_edt, binary_dilation
+
+
 class DriveData(torch.utils.data.Dataset):
     def __init__(self, split='train', transform=None, root_dir='/dtu/datasets1/02516/DRIVE'):
         'Initialization'
         self.split = split
         self.transform = transform
        
-        # Use all training images for training
+        # Use ONLY the training folder, split into train/val/test
+        data_path = os.path.join(root_dir, 'training')
+        all_image_paths = sorted(glob(data_path + '/images/*.tif'))
+        all_mask_paths = sorted(glob(data_path + '/1st_manual/*.gif'))  # ← vessel segmentation masks!
+        
+        # Split: 12 train / 4 val / 4 test (total 20 images)
         if split == 'train':
-            data_path = os.path.join(root_dir, 'training')
-            self.image_paths = sorted(glob(data_path + '/images/*.tif'))
-            self.mask_paths = sorted(glob(data_path + '/1st_manual/*.gif'))
-        
-        # Use test folder for val and test splits
+            self.image_paths = all_image_paths[:12]
+            self.mask_paths = all_mask_paths[:12]
         elif split == 'val':
-            data_path = os.path.join(root_dir, 'test')
-            all_image_paths = sorted(glob(data_path + '/images/*.tif'))
-            all_mask_paths = sorted(glob(data_path + '/mask/*.gif'))
-            
-            # Use second half for validation
-            self.image_paths = all_image_paths[10:]
-            self.mask_paths = all_mask_paths[10:]
-        
+            self.image_paths = all_image_paths[12:16]
+            self.mask_paths = all_mask_paths[12:16]
         elif split == 'test':
-            data_path = os.path.join(root_dir, 'test')
-            all_image_paths = sorted(glob(data_path + '/images/*.tif'))
-            all_mask_paths = sorted(glob(data_path + '/mask/*.gif'))
-            
-            # Use first half for testing
-            self.image_paths = all_image_paths[:10]
-            self.mask_paths = all_mask_paths[:10]
+            self.image_paths = all_image_paths[16:20]
+            self.mask_paths = all_mask_paths[16:20]
+        else:
+            raise ValueError(f"Invalid split: {split}. Must be 'train', 'val', or 'test'")
         
         # Verify matching lengths
         if len(self.image_paths) != len(self.mask_paths):
@@ -59,10 +54,9 @@ class DriveData(torch.utils.data.Dataset):
         Y = self.transform(mask)
         
         # Binarize mask after transform
-        Y = (Y > 0.5)
+        Y = (Y > 0.5).float()
         
         return X, Y
-
 class PH2(torch.utils.data.Dataset):
     def __init__(self, 
     root_dir='/dtu/datasets1/02516/PH2_Dataset_images',

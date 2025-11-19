@@ -86,8 +86,6 @@ class Experiment:
             
             # Update metrics
             probs = F.sigmoid(logits) 
-            #logger.info(f"PROBS SHAPE {probs.shape}")
-            #logger.info("Probs min max: {} / {}".format(probs.min().item(), probs.max().item()))
             self.train_accuracy.update(probs, y, threshold=threshold)
             self.train_dice.update(probs, y, threshold=threshold)
             self.train_iou.update(probs, y, threshold=threshold)
@@ -95,11 +93,6 @@ class Experiment:
             self.train_specificity.update(probs, y, threshold=threshold)
             total_loss += loss.item()
             num_batches += 1
-
-            # if epoch % 5 == 0:
-            #     #Plot predictions to file using matplotlib
-            #     logger.info("Plotting predictions for debugging")
-            #     self._plot_predictions(X, y, probs, num_batches, epoch, phase='train')
 
             self.progress.update(self.task_train, advance=1)
         
@@ -169,6 +162,9 @@ class Experiment:
         # Make test progress bar visible
         self.progress.update(self.task_test, visible=True)
         
+        # Storage for visualization
+        sample_X, sample_y, sample_probs = None, None, None
+        
         with t.no_grad():
             for X, y in self.config['test_loader']:
                 X, y = X.to(settings.device), y.to(settings.device)
@@ -185,7 +181,18 @@ class Experiment:
                 total_loss += loss.item()
                 num_batches += 1
                 
+                # Save first batch for visualization
+                if sample_X is None:
+                    sample_X = X
+                    sample_y = y
+                    sample_probs = probs
+                
                 self.progress.update(self.task_test, advance=1)
+        
+        # Plot one sample from test set
+        if sample_X is not None:
+            logger.info("Saving test set visualization...")
+            self._plot_test_sample(sample_X, sample_y, sample_probs)
         
         logger.info("Test evaluation complete")
         
@@ -238,51 +245,45 @@ class Experiment:
             self.progress.stop()
             self.experiment.finish()
 
-    def _plot_predictions(self, X, y, probs, batch_idx, epoch, phase='train'):
-        """Plot predictions vs true masks for debugging"""
+    def _plot_test_sample(self, X, y, probs):
+        """Plot a single test sample prediction at the end of training"""
         # Convert tensors to numpy for plotting
-        X_np = X.detach().cpu().numpy()
-        y_np = y.detach().cpu().numpy().squeeze()  # Assuming y has shape [batch, 1, H, W]
-        preds_np = (probs.detach().cpu().numpy() > threshold).astype(np.float32)
+        X_np = X[0].detach().cpu().numpy()  # Take first sample
+        y_np = y[0].detach().cpu().numpy().squeeze()  # Assuming y has shape [batch, 1, H, W]
+        pred_np = (probs[0].detach().cpu().numpy() > threshold).astype(np.float32)
         
-        # Plot first 4 samples in the batch
-        n_samples = min(4, X.shape[0])
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
         
-        fig, axes = plt.subplots(n_samples, 3, figsize=(12, 4*n_samples))
-        if n_samples == 1:
-            axes = axes.reshape(1, -1)
+        # Input image
+        img = X_np.transpose(1, 2, 0)
+        if img.shape[2] == 1:  # Grayscale
+            img = img.squeeze()
+            axes[0].imshow(img, cmap='gray')
+        else:  # RGB
+            # Denormalize if needed
+            if img.min() < 0 or img.max() > 1:
+                img = (img - img.min()) / (img.max() - img.min())
+            axes[0].imshow(img)
+        axes[0].set_title('Input Image', fontsize=14)
+        axes[0].axis('off')
         
-        for i in range(n_samples):
-            # Input image
-            img = X_np[i].transpose(1, 2, 0)
-            if img.shape[2] == 1:  # Grayscale
-                img = img.squeeze()
-                axes[i, 0].imshow(img, cmap='gray')
-            else:  # RGB
-                # Denormalize if needed
-                if img.min() < 0 or img.max() > 1:
-                    img = (img - img.min()) / (img.max() - img.min())
-                axes[i, 0].imshow(img)
-
-            axes[i, 0].set_title(f'Input Image')
-            axes[i, 0].axis('off')
-            
-            # True mask
-            # y_np has shape [batch, H, W] with no channel dimension
-            axes[i, 1].imshow(y_np[i], cmap='gray')
-            axes[i, 1].set_title('True Mask')
-            axes[i, 1].axis('off')
-            
-            # Prediction
-            # preds_np has shape [batch, 1, H, W] with channel dimension
-            pred_mask = preds_np[i, 0] if preds_np.ndim == 4 else preds_np[i]
-            axes[i, 2].imshow(pred_mask, cmap='gray')
-            axes[i, 2].set_title('Predicted Mask')
-            axes[i, 2].axis('off')
+        # True mask
+        axes[1].imshow(y_np, cmap='gray')
+        axes[1].set_title('Ground Truth Mask', fontsize=14)
+        axes[1].axis('off')
         
-        plt.suptitle(f'Epoch {epoch}, {phase} batch {batch_idx}', fontsize=16)
+        # Prediction
+        pred_mask = pred_np[0] if pred_np.ndim == 3 else pred_np
+        axes[2].imshow(pred_mask, cmap='gray')
+        axes[2].set_title('Predicted Mask', fontsize=14)
+        axes[2].axis('off')
+        
+        plt.suptitle('Test Set Segmentation Result', fontsize=16, fontweight='bold')
         plt.tight_layout()
         
-        # Save to file
-        plt.savefig(f'./results/debug_{phase}_epoch{epoch}_batch{batch_idx}.png', dpi=100, bbox_inches='tight')
+        # Save to results folder
+        import os
+        os.makedirs('./results', exist_ok=True)
+        plt.savefig('./results/test_prediction.png', dpi=150, bbox_inches='tight')
         plt.close()
+        logger.info("Test visualization saved to ./results/test_prediction.png")

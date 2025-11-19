@@ -27,59 +27,59 @@ model = smp.Unet(
 unet = UNet256()
 encdec = EncDec()
 
-loss_function = DiceLoss()
+loss_function = FocalLoss()
 project_name = 'Segmentation'
 epochs = 70
 dataset = settings.root_dir.split('/')[-1]
 
 
-# drive_cnn = encdec#UNet()
-# drive_cnn_optimizer = t.optim.Adam(drive_cnn.parameters(), lr= 5e-5, weight_decay= 1e-5)
-# drive_cnn_scheduler = t.optim.lr_scheduler.StepLR(
-#     drive_cnn_optimizer,
-#     step_size=70,
-#     gamma=0.5
-#     )
-    
-# drive_cnn_experiment = Experiment(
-#     project_name=project_name,
-#     name = 'Enc-Dec (Retinal Data), Loss: Focal Loss ',
-#     config={
-#         'train_loader': DriveData_trainloader,
-#         'val_loader': DriveData_valloader,
-#         'test_loader':DriveData_testloader,
-#         'model': drive_cnn,
-#         'loss_function': loss_function,
-#         'optimizer': drive_cnn_optimizer,
-#         'epochs': epochs,
-#         'dataset': dataset,
-#         'scheduler': drive_cnn_scheduler
-#     }
-# )
-
-ph2 = unet
-ph2_optimizer = t.optim.Adam(ph2.parameters(), lr= 5e-4)#, weight_decay= 1e-5)
-ph2_scheduler = t.optim.lr_scheduler.StepLR(
-    ph2_optimizer,
-    step_size=20,
+drive_cnn = model
+drive_cnn_optimizer = t.optim.Adam(drive_cnn.parameters(), lr= 1e-3) #, weight_decay= 1e-5)
+drive_cnn_scheduler = t.optim.lr_scheduler.StepLR(
+    drive_cnn_optimizer,
+    step_size=30,
     gamma=0.5
     )
-ph2_experiment = Experiment(
+    
+drive_cnn_experiment = Experiment(
     project_name=project_name,
-    name = 'Encoder-Decoder  (PH2 Data)',
+    name = 'Unet  (Retinal Data), Loss: Weighted',
     config={
-        'train_loader': PH2_trainloader,
-        'val_loader': PH2_valloader,
-        'test_loader': PH2_testloader,
-        'model': ph2,
+        'train_loader': DriveData_trainloader,
+        'val_loader': DriveData_valloader,
+        'test_loader':DriveData_testloader,
+        'model': drive_cnn,
         'loss_function': loss_function,
-        'optimizer': ph2_optimizer,
+        'optimizer': drive_cnn_optimizer,
         'epochs': epochs,
         'dataset': dataset,
-        'scheduler': ph2_scheduler
+        'scheduler': drive_cnn_scheduler
     }
 )
 
+# ph2 = model
+# ph2_optimizer = t.optim.Adam(ph2.parameters(), lr= 5e-4)#, weight_decay= 1e-5)
+# ph2_scheduler = t.optim.lr_scheduler.StepLR(
+#     ph2_optimizer,
+#     step_size=20,
+#     gamma=0.5
+#     )
+# ph2_experiment = Experiment(
+#     project_name=project_name,
+#     name = 'Encoder-Decoder  (PH2 Data)',
+#     config={
+#         'train_loader': PH2_trainloader,
+#         'val_loader': PH2_valloader,
+#         'test_loader': PH2_testloader,
+#         'model': ph2,
+#         'loss_function': loss_function,
+#         'optimizer': ph2_optimizer,
+#         'epochs': epochs,
+#         'dataset': dataset,
+#         'scheduler': ph2_scheduler
+#     }
+# )
 
-ph2_experiment.run()
-#drive_cnn_experiment.run()
+
+# ph2_experiment.run()
+drive_cnn_experiment.run()
