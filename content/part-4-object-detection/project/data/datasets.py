@@ -8,7 +8,7 @@ from torchvision import transforms as T
 import matplotlib.pyplot as plt
 
 import selectivesearch
-from xml.etree import ElementTree as ET
+from .utils import read_content
 
 class RCNNRegionDataset(torch.utils.data.Dataset):
     def __init__(
@@ -65,8 +65,7 @@ if __name__ == '__main__':
     print("Regions:", regions[:10])
 
     # Plot some of the proposed regions
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(
-10, 10))
+    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 10))
     ax.imshow(img)
     for i, region in enumerate(regions):
         if i < 100:
