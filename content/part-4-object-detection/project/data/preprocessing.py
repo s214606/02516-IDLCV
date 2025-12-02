@@ -5,7 +5,7 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 import selectivesearch
-
+from pathlib import Path
 from .utils import read_content
 from .transforms import region_transform
 
@@ -79,7 +79,7 @@ def generate_training_data(xml_dir, output_dir, iou_pos_threshold=0.5,
         
         # Read ground truth
         name, gt_boxes = read_content(fname)  # gt_boxes should be [x1, y1, x2, y2, class_id]
-        
+        # print(f"name is {name} and gt_boxes is {gt_boxes}")
         # Load and resize image
         image_path = os.path.join(os.path.dirname(xml_dir), 'images', name)
         img = Image.open(image_path).convert("RGB")
@@ -89,8 +89,12 @@ def generate_training_data(xml_dir, output_dir, iou_pos_threshold=0.5,
         
         # Adjust ground truth boxes to match resized image
         gt_boxes_resized = gt_boxes.copy()
+        #print(f"gt_boxes_resized are a LIST and are {gt_boxes_resized}")
+        #print(f"gt_boxes_resized are a LIST and are {gt_boxes_resized[:, :4]}")
+        gt_boxes_resized = np.array(gt_boxes_resized, dtype=float)  # or np.float32, etc.
         gt_boxes_resized[:, :4] *= resize_ratio
-        
+        #gt_boxes_resized = gt_boxes_resized.tolist()
+
         # Generate region proposals
         img_np = np.array(img)
         img_lbl, regions = selectivesearch.selective_search(
@@ -128,6 +132,8 @@ def generate_training_data(xml_dir, output_dir, iou_pos_threshold=0.5,
             
             if max_iou >= iou_pos_threshold:
                 # Positive example
+                # print(f"max_iou is {max_iou} and its index is {max_iou_idx}")
+                # print(f"gt boxes resized is {gt_boxes_resized}")
                 label = int(gt_boxes_resized[max_iou_idx, 4])  # class id
                 bbox_target = compute_regression_targets(
                     proposal, 
@@ -240,8 +246,10 @@ class RCNNDataset(Dataset):
         return {
             'image': image,
             'label': region_data['label'],
-            'bbox_target': region_data['bbox_target']
+            'bbox_target': region_data['bbox_target'] #not_sure
         }
+
+# class RCNN_Train_Dataloader(Dataloader):
 
 
 class RCNNTestDataset(Dataset):
@@ -316,10 +324,77 @@ class RCNNTestDataset(Dataset):
 
 
 if __name__ == '__main__':
-    # Generate training data
-    generate_training_data(
-        xml_dir="/dtu/datasets1/02516/potholes/annotations",
-        output_dir="./data/rcnn_regions",
-        iou_pos_threshold=0.5,
-        iou_neg_threshold=0.3
-    )
+    # # Generate training data
+    # generate_training_data(
+    #     xml_dir="/dtu/datasets1/02516/potholes/annotations",
+    #     #output_dir="./data/rcnn_regions",
+    #     output_dir="/dtu/blackhole/04/223556/DLCV_p4", #CHANGE FOR YOUR OWN $BLACKHOLE space
+    #     iou_pos_threshold=0.5,
+    #     iou_neg_threshold=0.3
+    # )
+
+    #alternative is to create symbolic link
+
+    root = Path("/dtu/blackhole/04/223556/DLCV_p4")  # change if needed
+    #pt_files = sorted(root.glob("*.pt"))
+
+    pt_files = sorted(root.glob("region_*.pt"))   # ⬅️ excludes index.pt automatically
+    print(f"Found {len(pt_files)} .pt files")
+
+    # Inspect first 3 files (or fewer if there aren't that many)
+    for path in pt_files[:1]:
+        print("\n=== File:", path.name, "===")
+        data = torch.load(path, map_location="cpu")
+        #print("Type:", type(data))
+        # ----------------------------------------------------
+        #  NEW CODE TO OPEN THE IMAGE (for safety purposes)
+        # ----------------------------------------------------
+    
+        # 1. Access the image tensor
+        # region_tensor = data['image'] # Shape: (3, 227, 227), range [0, 1]
+        
+        # 2. Convert to NumPy, scale back to 0-255, and change dtype
+        #    The .cpu() is often needed if the tensor was saved from a GPU
+        # img_np = (region_tensor.cpu().numpy() * 255).astype(np.uint8) 
+        
+        # 3. Reshape from (C, H, W) to (H, W, C)
+        #    H=227, W=227, C=3
+        # img_np = np.transpose(img_np, (1, 2, 0)) # Transpose axes (1, 2, 0) -> (H, W, C)
+
+        # 4. Create PIL Image
+        # region_img = Image.fromarray(img_np)
+        
+        # 5. Display (Requires a display environment like Jupyter/Colab) or Save
+        # region_img.show() # Tries to open the image in a viewer (may not work in CLI)
+        # region_img.save("test_region_view.png")
+        # print(f"Saved region image to test_region_view.png for inspection.")
+
+        # ----------------------------------------------------
+        # Back to Normal 
+        # ----------------------------------------------------
+        label = data["label"]
+        bbox = data["bbox"]
+        bbox_target = data["bbox_target"]
+        image_name = data["image_name"]
+
+        print("label:", label)
+        print("bbox:", bbox)
+        print("bbox_target:", bbox_target)
+        print("bbox_target:", image_name)
+
+        # # 📦 First box only (index 0)
+        # print("First bbox:", bbox[0])
+        # print("First bbox_target:", bbox_target[0])
+
+        if isinstance(data, dict):
+            print("Keys:", data.keys())
+
+        #     for k, v in data.items():
+                # if torch.is_tensor(v):
+            #         print(f"  {k}: tensor, shape={v.shape}, dtype={v.dtype}")
+        #         else:
+        #             print(f"  {k}: {type(v)} -> {v}")
+        # elif torch.is_tensor(data):
+        #     print("Tensor shape:", data.shape, "dtype:", data.dtype)
+        # else:
+        #     print("Content:", data)
