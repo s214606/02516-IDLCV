@@ -15,17 +15,19 @@ full_dataset = RCNNDataset(
 
 # Create Train/Val Split 80-20
 train_size = int(0.8 * len(full_dataset))
-val_size = len(full_dataset) - train_size
+val_size = int(0.10 * len(full_dataset))
+test_size = len(full_dataset) - train_size - val_size
 
-train_dataset, val_dataset = random_split(
+train_dataset, val_dataset, test_dataset = random_split(
     full_dataset, 
-    [train_size, val_size],
+    [train_size, val_size, test_size],
     generator=torch.Generator().manual_seed(42) 
 )
 
 print(f"Total regions: {len(full_dataset)}")
 print(f"Training regions: {len(train_dataset)}")
 print(f"Validation regions: {len(val_dataset)}")
+print(f"Test regions: {len(test_dataset)}")
 
 # 4. Create DataLoaders
 train_loader = DataLoader(
@@ -38,6 +40,14 @@ train_loader = DataLoader(
 
 val_loader = DataLoader(
     val_dataset,
+    batch_size=128,
+    shuffle=False,         
+    num_workers=4,
+    pin_memory=True
+)
+
+test_loader = DataLoader(
+    test_dataset,
     batch_size=128,
     shuffle=False,         
     num_workers=4,
