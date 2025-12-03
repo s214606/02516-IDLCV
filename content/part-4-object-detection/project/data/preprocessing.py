@@ -238,7 +238,7 @@ class RCNNDataset(Dataset):
         region_data = torch.load(region_path)
         
         image = region_data['image']  # Already (3, 227, 227) tensor in [0, 1]
-        
+        bbox = region_data['bbox']
         # Apply additional transforms if needed (e.g., normalization)
         if self.transform:
             image = self.transform(image)
@@ -246,7 +246,8 @@ class RCNNDataset(Dataset):
         return {
             'image': image,
             'label': region_data['label'],
-            'bbox_target': region_data['bbox_target'] #not_sure
+            'bbox_target': region_data['bbox_target'], #not_sure
+            'bbox':bbox
         }
 
 # class RCNN_Train_Dataloader(Dataloader):
@@ -328,7 +329,7 @@ if __name__ == '__main__':
     # generate_training_data(
     #     xml_dir="/dtu/datasets1/02516/potholes/annotations",
     #     #output_dir="./data/rcnn_regions",
-    #     output_dir="/dtu/blackhole/04/223556/DLCV_p4", #CHANGE FOR YOUR OWN $BLACKHOLE space
+    #     output_dir="/dtu/blackhole/17/168631/DLCV_p4", #CHANGE FOR YOUR OWN $BLACKHOLE space
     #     iou_pos_threshold=0.5,
     #     iou_neg_threshold=0.3
     # )
@@ -345,7 +346,7 @@ if __name__ == '__main__':
     for path in pt_files[:1]:
         print("\n=== File:", path.name, "===")
         data = torch.load(path, map_location="cpu")
-        #print("Type:", type(data))
+        print("Type:", type(data))
         # ----------------------------------------------------
         #  NEW CODE TO OPEN THE IMAGE (for safety purposes)
         # ----------------------------------------------------
@@ -383,11 +384,11 @@ if __name__ == '__main__':
         print("bbox_target:", image_name)
 
         # # 📦 First box only (index 0)
-        # print("First bbox:", bbox[0])
-        # print("First bbox_target:", bbox_target[0])
+        # # print("First bbox:", bbox[0])
+        # # print("First bbox_target:", bbox_target[0])
 
-        if isinstance(data, dict):
-            print("Keys:", data.keys())
+        # if isinstance(data, dict):
+        #     print("Keys:", data.keys())
 
         #     for k, v in data.items():
                 # if torch.is_tensor(v):

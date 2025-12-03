@@ -1,17 +1,15 @@
 import os
 from torch.utils.data import DataLoader
 import torch
-# from data.datasets import DriveData,PH2, PH2Clicks
 from torch.utils.data import DataLoader, random_split
-# from data.transforms import train_transform, test_transform
-#from config import settings
 from data.preprocessing import RCNNDataset
+from data.transforms import region_transform
 
-root_dir = "/dtu/blackhole/04/223556/DLCV_p4"
+root_dir = "/dtu/blackhole/17/168631/DLCV_p4"
 
 full_dataset = RCNNDataset(
     regions_dir=root_dir, 
-    transform=None,       
+    transform=region_transform,       
     balance_classes=True  
 )
 
@@ -52,37 +50,18 @@ if __name__ == '__main__':
 
     # Fetch one batch
     batch = next(iter(train_loader))
-
+    #images, proposals, labels, target_deltas = batch
     images = batch['image']
     labels = batch['label']
     targets = batch['bbox_target']
+    proposals = batch['bbox']
 
     print(f"Image Batch Shape:  {images.shape}")   # Expect (128, 3, 227, 227)
     print(f"Labels Batch Shape: {labels.shape}")   # Expect (128)
     print(f"Targets Batch Shape:{targets.shape}")  # Expect (128, 4)
-
+    print(f"Proposals batch shape:{proposals.shape}")
     # Sanity check types
     print(f"Image Type: {images.dtype}")           # Should be torch.float32
     print(f"Label Type: {labels.dtype}")           # Should be torch.int64 (long)
 
-    # # Print dataset information
-    # print("=" * 60)
-    # print("DATASET INFORMATION")
-    # print("=" * 60)
 
-    # print(f"Number of samples: {len(DriveData_train)}")
-    # print(f"Split: {DriveData_train.split}")
-    # print(f"\nFirst few image paths:")
-    # for i, path in enumerate(DriveData_train.image_paths[:3]):
-    #     print(f"  {i}: {os.path.basename(path)}")
-    # print(f"\nFirst few mask paths:")
-    # image, mask = DriveData_train[0]
-
-    # # Print sample information
-    # print("\n" + "=" * 60)
-    # print("FIRST SAMPLE INFORMATION")
-    # print("=" * 60)
-    # print(f"Image shape: {image.shape}")
-    # print(f"Image dtype: {image.dtype}")
-    # print(f"Image min/max: {image.min():.4f} / {image.max():.4f}")
-    # print(f"\nMask shape: {mask.shape}")

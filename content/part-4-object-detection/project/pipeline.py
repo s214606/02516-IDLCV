@@ -1,218 +1,224 @@
 import torch as t
-import torch.nn.functional as F
 import wandb
-from utils.logger import get_logger
-from config import settings
-from typing import Dict, Any
-from rich.progress import Progress
-from metrics.segmentation import Accuracy, IoU, DiceScore, Sensitivity, Specificity
-import matplotlib.pyplot as plt
+import os
 import numpy as np
+from utilities.logger import get_logger
+from config import settings
+from rich.progress import Progress
 
 logger = get_logger(__name__) 
-threshold = 0.5
+
 class Experiment:
-    """
-    Required in config:
-    """
-    def __init__(
-            self, 
-            project_name: str,
-            name: str,
-            config: dict
-            ):
+    def __init__(self, project_name: str, name: str, config: dict):
         self.project_name = project_name
         self.name = name
         self.config = config
         
+        # Initialize Progress Bar
         self.progress = Progress()
-
-        self.train_accuracy = Accuracy()
-        self.train_dice = DiceScore()
-        self.train_iou = IoU()
-        self.train_sensitivity = Sensitivity()
-        self.train_specificity = Specificity()
-
-        self.val_accuracy = Accuracy()
-        self.val_dice = DiceScore()
-        self.val_iou = IoU()
-        self.val_sensitivity = Sensitivity()
-        self.val_specificity = Specificity()
-
-        self.test_accuracy = Accuracy()
-        self.test_dice = DiceScore()
-        self.test_iou = IoU()
-        self.test_sensitivity = Sensitivity()
-        self.test_specificity = Specificity()
-      
-
+        
         self.task = self.progress.add_task(
-            f"[red]Running {self.config['epochs']} epochs...",
+            f"[red]Running {self.config['epochs']} epochs...", 
             total=self.config['epochs']
-            )
-
+        )
         self.task_train = self.progress.add_task(
-            "[green]Training epoch...",
+            "[green]Training epoch...", 
             total=len(self.config['train_loader'])
-            )
-        
+        )
         self.task_val = self.progress.add_task(
-            "[blue]Validating epoch...",
+            "[blue]Validating epoch...", 
             total=len(self.config['val_loader'])
-            )
+        )
         
+        test_len = len(self.config['test_loader']) if 'test_loader' in self.config and self.config['test_loader'] else 0
         self.task_test = self.progress.add_task(
             "[yellow]Testing on test set...",
-            total=len(self.config.get('test_loader', [])) if self.config.get('test_loader') else 0,
-            visible=False  # Hide until test phase
-            )
-        
+            total=test_len,
+            visible=False
+        )
+
+    def save_checkpoint(self, epoch):
+        """
+        Saves only the current state as the 'last' checkpoint.
+        """
+        os.makedirs('checkpoints', exist_ok=True)
+        state = {
+            'epoch': epoch,
+            'model_state_dict': self.config['model'].state_dict(),
+            'optimizer_state_dict': self.config['optimizer'].state_dict(),
+        }
+        # Save as _last.pth
+        t.save(state, f'checkpoints/{self.name}_last.pth')
+        logger.info(f"Saved final model at epoch {epoch}")
+
     def _parse_config(self):
-        return {k:f'{v=}'.split('=')[0] for k, v in self.config.items()}
+        return {k: str(v) for k, v in self.config.items() 
+                if k not in ['train_loader', 'val_loader', 'test_loader', 'dataset', 'model', 'loss_function']}
+
+    def _calculate_accuracy(self, scores, labels):
+        # scores: (Batch, Num_Classes) -> Get index of max score
+        _, preds = t.max(scores, 1)
+        correct = (preds == labels).sum().item()
+        return correct, preds
 
     def train(self, epoch):
         self.config['model'].train()
         total_loss = 0.0
+        total_correct = 0
+        total_samples = 0
         num_batches = 0
-        self.train_accuracy.reset()  # Reset accuracy at start of epoch
         
-        for X, y in self.config['train_loader']:
-            X, y = X.to(settings.device), y.to(settings.device)
+        for batch in self.config['train_loader']:
+            images = batch['image'].to(settings.device)
+            labels = batch['label'].to(settings.device)
+            target_deltas = batch['bbox_target'].to(settings.device)
+            
             self.config['optimizer'].zero_grad()
-            logits = self.config['model'](X)
-            loss = self.config['loss_function'](logits, y)
+            
+            cls_scores, bbox_deltas_pred = self.config['model'](images)
+            
+            loss = self.config['loss_function'](
+                cls_scores, 
+                bbox_deltas_pred, 
+                labels, 
+                target_deltas
+            )
+            
             loss.backward()
             self.config['optimizer'].step()
             
-            # Update metrics
-            probs = F.sigmoid(logits) 
-            #logger.info(f"PROBS SHAPE {probs.shape}")
-            #logger.info("Probs min max: {} / {}".format(probs.min().item(), probs.max().item()))
-            self.train_accuracy.update(probs, y, threshold=threshold)
-            self.train_dice.update(probs, y, threshold=threshold)
-            self.train_iou.update(probs, y, threshold=threshold)
-            self.train_sensitivity.update(probs, y, threshold=threshold)
-            self.train_specificity.update(probs, y, threshold=threshold)
+            # --- Metrics ---
             total_loss += loss.item()
+            correct, _ = self._calculate_accuracy(cls_scores, labels)
+            total_correct += correct
+            total_samples += labels.size(0)
+            
             num_batches += 1
-
-            # if epoch % 5 == 0:
-            #     #Plot predictions to file using matplotlib
-            #     logger.info("Plotting predictions for debugging")
-            #     self._plot_predictions(X, y, probs, num_batches, epoch, phase='train')
-
             self.progress.update(self.task_train, advance=1)
         
-        if self.config.get('scheduler') is not None:
-            before_lr = self.config['optimizer'].param_groups[0]['lr']
+        if self.config.get('scheduler'):
             self.config['scheduler'].step()
-            after_lr = self.config['optimizer'].param_groups[0]['lr']
-
-            if before_lr != after_lr:
-                logger.info("Epoch %d: lr %.4f -> %.4f" % (epoch, before_lr, after_lr))
-
 
         return {
             'loss/train': total_loss / num_batches,
-            'accuracy/train': self.train_accuracy.compute(),
-            'dice/train': self.train_dice.compute(),
-            'iou/train': self.train_iou.compute(),
-            'sensitivity/train':self.train_sensitivity.compute(),
-            'specificity/train':self.train_specificity.compute(),
-            }
+            'accuracy/train': total_correct / total_samples
+        }
 
     def eval(self, epoch):
         self.config['model'].eval()
         total_loss = 0.0
+        total_correct = 0
+        total_samples = 0
         num_batches = 0
-        self.val_accuracy.reset()  # Reset accuracy at start of validation
+        
+        # For visualization
+        log_images = []
+        visualize_this_epoch = (epoch % 25 == 0) or (epoch == 1)
         
         with t.no_grad():
-            for X, y in self.config['val_loader']:
-                X, y = X.to(settings.device), y.to(settings.device)
-                logits = self.config['model'](X)
-                loss = self.config['loss_function'](logits, y)
+            for i, batch in enumerate(self.config['val_loader']):
+                images = batch['image'].to(settings.device)
+                labels = batch['label'].to(settings.device)
+                target_deltas = batch['bbox_target'].to(settings.device)
+
+                cls_scores, bbox_deltas_pred = self.config['model'](images)
                 
-                # Update metrics
-                probs = F.sigmoid(logits) 
-                self.val_accuracy.update(probs, y, threshold=threshold)
-                self.val_dice.update(probs, y, threshold=threshold)
-                self.val_iou.update(probs, y, threshold=threshold)
-                self.val_sensitivity.update(probs, y, threshold=threshold)
-                self.val_specificity.update(probs, y, threshold=threshold)
+                loss = self.config['loss_function'](
+                    cls_scores, 
+                    bbox_deltas_pred, 
+                    labels, 
+                    target_deltas
+                )
+                
+                # --- Metrics ---
                 total_loss += loss.item()
+                correct, preds = self._calculate_accuracy(cls_scores, labels)
+                total_correct += correct
+                total_samples += labels.size(0)
                 num_batches += 1
+                
+                # --- Visualization (First batch only) ---
+                if visualize_this_epoch and i == 0:
+                    limit = min(len(images), 8)
+                    for k in range(limit):
+                        img_tensor = images[k].cpu()
+                        pred_lbl = preds[k].item()
+                        true_lbl = labels[k].item()
+                        
+                        pred_text = "Pothole" if pred_lbl == 1 else "Background"
+                        true_text = "Pothole" if true_lbl == 1 else "Background"
+                        
+                        log_images.append(
+                            wandb.Image(
+                                img_tensor, 
+                                caption=f"Pred: {pred_text}\nTrue: {true_text}"
+                            )
+                        )
                 
                 self.progress.update(self.task_val, advance=1)
         
-        return {
+        metrics = {
             'loss/validation': total_loss / num_batches,
-            'accuracy/validation': self.val_accuracy.compute(),
-            'dice/validation': self.val_dice.compute(),
-            'iou/validation': self.val_iou.compute(),
-            'specificity/validation': self.val_specificity.compute(),
-            'sensitivity/validation': self.val_sensitivity.compute(),
+            'accuracy/validation': total_correct / total_samples
         }
+        
+        if log_images:
+            metrics['examples/validation_predictions'] = log_images
+            
+        return metrics
 
     def test(self):
-        """Evaluate model on test set after training is complete"""
-        if 'test_loader' not in self.config or self.config['test_loader'] is None:
-            logger.warning("No test_loader provided in config, skipping test evaluation")
-            return {}
-        
-        logger.info("Running final evaluation on test set...")
+        if 'test_loader' not in self.config or not self.config['test_loader']:
+            return None
+
+        self.progress.update(self.task_test, visible=True)
         self.config['model'].eval()
         total_loss = 0.0
+        total_correct = 0
+        total_samples = 0
         num_batches = 0
-        self.test_accuracy.reset()
-        
-        # Make test progress bar visible
-        self.progress.update(self.task_test, visible=True)
         
         with t.no_grad():
-            for X, y in self.config['test_loader']:
-                X, y = X.to(settings.device), y.to(settings.device)
-                logits = self.config['model'](X)
-                loss = self.config['loss_function'](logits, y)
+            for batch in self.config['test_loader']:
+                images = batch['image'].to(settings.device)
+                labels = batch['label'].to(settings.device)
+                target_deltas = batch['bbox_target'].to(settings.device)
+
+                cls_scores, bbox_deltas_pred = self.config['model'](images)
                 
-                # Update metrics
-                probs = F.sigmoid(logits) 
-                self.test_accuracy.update(probs, y, threshold=threshold)
-                self.test_dice.update(probs, y, threshold=threshold)
-                self.test_iou.update(probs, y, threshold=threshold)
-                self.test_sensitivity.update(probs, y, threshold=threshold)
-                self.test_specificity.update(probs, y, threshold=threshold)
+                loss = self.config['loss_function'](
+                    cls_scores, 
+                    bbox_deltas_pred, 
+                    labels, 
+                    target_deltas
+                )
+                
                 total_loss += loss.item()
+                correct, _ = self._calculate_accuracy(cls_scores, labels)
+                total_correct += correct
+                total_samples += labels.size(0)
                 num_batches += 1
-                
                 self.progress.update(self.task_test, advance=1)
-        
-        logger.info("Test evaluation complete")
-        
+
         return {
             'loss/test': total_loss / num_batches,
-            'accuracy/test': self.test_accuracy.compute(),
-            'dice/test': self.test_dice.compute(),
-            'iou/test': self.test_iou.compute(),
-            'specificity/test': self.test_specificity.compute(),
-            'sensitivity/test': self.test_sensitivity.compute(),
+            'accuracy/test': total_correct / total_samples
         }
 
     def run(self):
         logger.info("Initializing Weights & Biases run")
         self.experiment = wandb.init(
-            entity = 'IDLCV',
-            project = self.project_name,
+            entity='IDLCV',
+            project=self.project_name,
             name=self.name,
-            config = self.config
+            config=self._parse_config()
         )
 
         logger.info("Starting experiment")
         self.progress.start()
-        
-        logger.info(f"Detected device: {settings.device}")
         self.config['model'].to(settings.device)
-        logger.info("Moved model to GPU")
+        
+        # NOTE: Removed best_val_loss tracking as we only save the final epoch
 
         try:
             for epoch in range(1, self.config['epochs'] + 1):
@@ -221,68 +227,24 @@ class Experiment:
 
                 self.experiment.log(train_results | test_results)
                 
+                # NOTE: Removed intermediate checkpoint saving here
+                
                 self.progress.reset(self.task_train)
                 self.progress.reset(self.task_val)
                 self.progress.update(self.task, advance=1)
             
-            # Run test evaluation after all training epochs
+            # --- Save Final Checkpoint ---
+            self.save_checkpoint(self.config['epochs'])
+
             test_results = self.test()
             if test_results:
                 self.experiment.log(test_results)
                 logger.info(f"Test Results: {test_results}")
 
-        except Exception as e: # TODO: 
+        except Exception as e: 
             logger.error(f"Experiment run failed with error: {e}")
+            raise e
         
         finally:
             self.progress.stop()
             self.experiment.finish()
-
-    def _plot_predictions(self, X, y, probs, batch_idx, epoch, phase='train'):
-        """Plot predictions vs true masks for debugging"""
-        # Convert tensors to numpy for plotting
-        X_np = X.detach().cpu().numpy()
-        y_np = y.detach().cpu().numpy().squeeze()  # Assuming y has shape [batch, 1, H, W]
-        preds_np = (probs.detach().cpu().numpy() > threshold).astype(np.float32)
-        
-        # Plot first 4 samples in the batch
-        n_samples = min(4, X.shape[0])
-        
-        fig, axes = plt.subplots(n_samples, 3, figsize=(12, 4*n_samples))
-        if n_samples == 1:
-            axes = axes.reshape(1, -1)
-        
-        for i in range(n_samples):
-            # Input image
-            img = X_np[i].transpose(1, 2, 0)
-            if img.shape[2] == 1:  # Grayscale
-                img = img.squeeze()
-                axes[i, 0].imshow(img, cmap='gray')
-            else:  # RGB
-                # Denormalize if needed
-                if img.min() < 0 or img.max() > 1:
-                    img = (img - img.min()) / (img.max() - img.min())
-                axes[i, 0].imshow(img)
-
-            axes[i, 0].set_title(f'Input Image')
-            axes[i, 0].axis('off')
-            
-            # True mask
-            # y_np has shape [batch, H, W] with no channel dimension
-            axes[i, 1].imshow(y_np[i], cmap='gray')
-            axes[i, 1].set_title('True Mask')
-            axes[i, 1].axis('off')
-            
-            # Prediction
-            # preds_np has shape [batch, 1, H, W] with channel dimension
-            pred_mask = preds_np[i, 0] if preds_np.ndim == 4 else preds_np[i]
-            axes[i, 2].imshow(pred_mask, cmap='gray')
-            axes[i, 2].set_title('Predicted Mask')
-            axes[i, 2].axis('off')
-        
-        plt.suptitle(f'Epoch {epoch}, {phase} batch {batch_idx}', fontsize=16)
-        plt.tight_layout()
-        
-        # Save to file
-        plt.savefig(f'./results/debug_{phase}_epoch{epoch}_batch{batch_idx}.png', dpi=100, bbox_inches='tight')
-        plt.close()

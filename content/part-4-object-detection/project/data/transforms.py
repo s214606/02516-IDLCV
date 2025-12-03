@@ -9,7 +9,6 @@ from albumentations.pytorch import ToTensorV2
 
 region_transform = T.Compose([
     T.Resize((256, 256)),
-    T.ToTensor(),
     
     ])
 
