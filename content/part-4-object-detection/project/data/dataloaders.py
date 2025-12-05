@@ -5,12 +5,18 @@ from torch.utils.data import DataLoader, random_split
 from data.preprocessing import RCNNDataset
 from data.transforms import region_transform
 
-root_dir = "/dtu/blackhole/17/168631/DLCV_p4"
+root_dir = "/dtu/blackhole/1c/167804/proposals"
 
 full_dataset = RCNNDataset(
     regions_dir=root_dir, 
     transform=region_transform,       
     balance_classes=True  
+)
+
+eval_dataset = RCNNDataset(
+    regions_dir=root_dir, 
+    transform=region_transform,       
+    balance_classes=True
 )
 
 # Create Train/Val Split 80-20
@@ -48,6 +54,14 @@ val_loader = DataLoader(
 
 test_loader = DataLoader(
     test_dataset,
+    batch_size=128,
+    shuffle=False,         
+    num_workers=4,
+    pin_memory=True
+)
+
+eval_loader = DataLoader(
+    eval_dataset,
     batch_size=128,
     shuffle=False,         
     num_workers=4,

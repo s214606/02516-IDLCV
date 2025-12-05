@@ -1,11 +1,14 @@
 import os
+import re
 from glob import glob
 import numpy as np
+
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
 import selectivesearch
 from pathlib import Path
+
 from .utils import read_content
 from .transforms import region_transform
 
@@ -69,7 +72,11 @@ def generate_training_data(xml_dir, output_dir, iou_pos_threshold=0.5,
     
     os.makedirs(output_dir, exist_ok=True)
     
-    xml_files = sorted(glob(os.path.join(xml_dir, '*.xml')))
+    
+    xml_files = sorted(
+        glob(os.path.join(xml_dir, '*.xml')),
+        key=lambda x: int(re.search(r'\d+', os.path.basename(x)).group())
+    )
     
     all_regions = []
     region_id = 0
@@ -99,15 +106,15 @@ def generate_training_data(xml_dir, output_dir, iou_pos_threshold=0.5,
         img_np = np.array(img)
         img_lbl, regions = selectivesearch.selective_search(
             img_np,
-            scale=900,
-            sigma=0.9,
-            min_size=10
+            scale=100,
+            sigma=0.8,
+            min_size=50
         )
         
         # Filter and convert proposals to [x1, y1, x2, y2] format
         proposals = []
         for r in regions:
-            if r['size'] < 200:
+            if r['size'] < 50:
                 continue
             x, y, w, h = r['rect']
             proposals.append([x, y, x + w, y + h])
@@ -239,6 +246,7 @@ class RCNNDataset(Dataset):
         
         image = region_data['image']  # Already (3, 227, 227) tensor in [0, 1]
         bbox = region_data['bbox']
+
         # Apply additional transforms if needed (e.g., normalization)
         if self.transform:
             image = self.transform(image)
@@ -247,7 +255,9 @@ class RCNNDataset(Dataset):
             'image': image,
             'label': region_data['label'],
             'bbox_target': region_data['bbox_target'], #not_sure
-            'bbox':bbox
+            'bbox':bbox,
+            'image_name': region_data['image_name'], 
+            'region_id': region_id 
         }
 
 # class RCNN_Train_Dataloader(Dataloader):
@@ -325,14 +335,14 @@ class RCNNTestDataset(Dataset):
 
 
 if __name__ == '__main__':
-    # # Generate training data
-    # generate_training_data(
-    #     xml_dir="/dtu/datasets1/02516/potholes/annotations",
-    #     #output_dir="./data/rcnn_regions",
-    #     output_dir="/dtu/blackhole/17/168631/DLCV_p4", #CHANGE FOR YOUR OWN $BLACKHOLE space
-    #     iou_pos_threshold=0.5,
-    #     iou_neg_threshold=0.3
-    # )
+    # Generate training data
+    generate_training_data(
+        xml_dir="/dtu/datasets1/02516/potholes/annotations",
+        #output_dir="./data/regions",
+        output_dir="/dtu/blackhole/1c/167804/proposals", #CHANGE FOR YOUR OWN $BLACKHOLE space
+        iou_pos_threshold=0.35,
+        iou_neg_threshold=0.1
+    )
 
     #alternative is to create symbolic link
 
